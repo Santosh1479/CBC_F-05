@@ -2,9 +2,6 @@ const userModel = require('../models/user.models');
 const userservice = require('../services/User.service');
 const { validationResult } = require('express-validator');
 const blacklistTokenModel = require('../models/blackListToken.model');
-const Car = require('../models/car.model');
-
-
 
 
 module.exports.registerUser = async (req, res, next) => {
@@ -51,15 +48,6 @@ module.exports.loginuser = async (req, res, next) => {
 
     res.status(200).json({ token, user });
 }
-exports.getUserData = async (req, res) => {
-    try {
-        const email = req.user.email;
-        const car = await Car.findOne({ email });
-        res.status(200).json({ email, charge: car ? car.charge : null });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch user data' });
-    }
-};
 
 module.exports.getUserProfile = async (req, res, next) => {
     res.status(200).json(req.user);
