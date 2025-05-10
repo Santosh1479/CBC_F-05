@@ -1,6 +1,6 @@
 // src/pages/Login.js
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,Link } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
@@ -82,6 +82,9 @@ export default function Login() {
             Register
           </button>
         </div>
+          <Link to={"/teacher-login"} className="text-white bg-red-400">
+            Teacher Login
+          </Link>
       </div>
     </div>
   );
