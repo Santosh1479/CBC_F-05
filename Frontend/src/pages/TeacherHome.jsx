@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -5,28 +6,52 @@ import axios from "axios";
 export default function TeacherHome() {
   const navigate = useNavigate();
   const name = localStorage.getItem("name");
+  const teacherId = localStorage.getItem("id");
   const [classrooms, setClassrooms] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [newClassroom, setNewClassroom] = useState({ name: "", subject: "" });
+  const [selectedClassroom, setSelectedClassroom] = useState(null);
+  const [streamTitle, setStreamTitle] = useState("");
+  const [streamLink, setStreamLink] = useState("");
+  const [showForm, setShowForm] = useState(false); // Define showForm state
+  const [newClassroom, setNewClassroom] = useState({ name: "", subject: "" }); // Define newClassroom state
 
-  // Fetch created classrooms
+  // Fetch classrooms created by the teacher
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`${import.meta.env.VITE_BASE_URL}/classrooms`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}/classrooms?teacherId=${teacherId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setClassrooms(res.data);
       } catch (err) {
         console.error("Error fetching classrooms:", err);
       }
+      setClassrooms([
+        {
+          _id: "dummy1",
+          name: "Math 101",
+          subject: "Mathematics",
+          teacher: teacherId,
+          students: [],
+          streamUrl: null,
+        },
+        {
+          _id: "dummy2",
+          name: "Physics 201",
+          subject: "Physics",
+          teacher: teacherId,
+          students: [],
+          streamUrl: null,
+        },
+      ]);
     };
 
     fetchClassrooms();
-  }, []);
+  }, [teacherId]);
 
-  // Handle form submission to create a new classroom
   const handleCreateClassroom = async (e) => {
     e.preventDefault();
     try {
@@ -57,13 +82,41 @@ export default function TeacherHome() {
     navigate("/teacher-login");
   };
 
+  // Generate Stream Link
+  const handleGenerateLink = () => {
+    if (!streamTitle) {
+      alert("Please enter a stream title.");
+      return;
+    }
+    const generatedLink = `${window.location.origin}/stream/${
+      selectedClassroom._id
+    }?title=${encodeURIComponent(streamTitle)}`;
+    setStreamLink(generatedLink);
+  };
+
+  // Handle starting the stream
+  const handleStartStream = () => {
+    if (!streamTitle || !streamLink) {
+      alert(
+        "Please complete all fields and generate the link before starting the stream."
+      );
+      return;
+    }
+
+    // Redirect to the stream page
+    navigate(`/stream/${selectedClassroom._id}`, { state: { streamTitle } });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header Section */}
       <div className="bg-gray-800 text-white p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Welcome, {name}!</h1>
         <button
-          onClick={handleLogout}
+          onClick={() => {
+            localStorage.clear();
+            navigate("/teacher-login");
+          }}
           className="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition"
         >
           Logout
@@ -71,7 +124,7 @@ export default function TeacherHome() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1">
+      <div className="flex flex-col flex-1">
         {/* Left Section: Create Classroom */}
         <div className="w-1/4 bg-gray-100 flex flex-col items-center justify-center p-4">
           {!showForm ? (
@@ -128,8 +181,8 @@ export default function TeacherHome() {
           )}
         </div>
 
-        {/* Right Section: Display Created Classrooms */}
-        <div className="w-3/4 bg-white p-8">
+        {/* Bottom Section: Display Created Classrooms */}
+        <div className="flex-1 bg-white p-8">
           <h2 className="text-xl font-semibold text-gray-700 mb-6">
             Your Created Classrooms:
           </h2>
@@ -139,7 +192,12 @@ export default function TeacherHome() {
               {classrooms.map((classroom) => (
                 <div
                   key={classroom._id}
-                  className="p-4 bg-gray-100 shadow-md rounded-lg"
+                  className="p-4 bg-gray-100 shadow-md rounded-lg cursor-pointer hover:bg-gray-200"
+                  onClick={() => {
+                    setSelectedClassroom(classroom);
+                    setStreamTitle("");
+                    setStreamLink("");
+                  }}
                 >
                   <h3 className="text-lg font-bold text-gray-800">
                     {classroom.name}

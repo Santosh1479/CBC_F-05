@@ -6,23 +6,23 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 // Register a teacher
 router.post(
-  "/register",
-  [
-    body("email").isEmail().withMessage("Invalid Email"),
-    body("name").isLength({ min: 3 }).withMessage("Name is too short"),
-    body("password").isLength({ min: 6 }).withMessage("Password is too short"),
-  ],
-  teacherController.registerTeacher
+    "/register",
+    [
+        body("email").isEmail().withMessage("Invalid Email"),
+        body("name").isLength({ min: 3 }).withMessage("Name is too short"),
+        body("password").isLength({ min: 6 }).withMessage("Password is too short"),
+    ],
+    teacherController.registerTeacher
 );
 
 // Login a teacher
 router.post(
-  "/login",
-  [
-    body("email").isEmail().withMessage("Invalid Email"),
-    body("password").isLength({ min: 6 }).withMessage("Password is too short"),
-  ],
-  teacherController.loginTeacher
+    "/login",
+    [
+        body("email").isEmail().withMessage("Invalid Email"),
+        body("password").isLength({ min: 6 }).withMessage("Password is too short"),
+    ],
+    teacherController.loginTeacher
 );
 
 // Logout a teacher

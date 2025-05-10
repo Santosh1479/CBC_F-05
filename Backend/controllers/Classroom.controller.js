@@ -1,36 +1,67 @@
-// filepath: c:\Users\Santosh\Desktop\CBC_F-05\Backend\controllers\Classroom.controller.js
-const Classroom = require('../models/Classroom.model');
+const classroomService = require('../services/Classroom.services');
 
-// Teacher starts stream
-exports.startStream = async (req, res) => {
-  const { classroomId } = req.params;
-  const { streamUrl } = req.body;
+exports.createClassroom = async (req, res) => {
+    const { name, subject, teacherId } = req.body;
 
-  const classroom = await Classroom.findById(classroomId);
-  if (!classroom) return res.status(404).json({ error: 'Classroom not found' });
+    if (!name || !subject || !teacherId) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
 
-  if (classroom.teacher.toString() !== req.user.id)
-    return res.status(403).json({ error: 'Unauthorized' });
-
-  classroom.streamUrl = streamUrl;
-  await classroom.save();
-
-  res.json({ message: 'Stream started', streamUrl });
+    try {
+        const classroom = await classroomService.createClassroom({ name, subject, teacherId });
+        res.status(201).json(classroom);
+    } catch (err) {
+        console.error("Error creating classroom:", err);
+        res.status(500).json({ message: "Failed to create classroom" });
+    }
 };
 
-// Student accesses stream
+exports.getClassroomsByTeacherId = async (req, res) => {
+    const { teacherId } = req.params;
+
+    try {
+        const classrooms = await classroomService.getClassroomsByTeacherId(teacherId);
+        res.status(200).json(classrooms);
+    } catch (err) {
+        console.error("Error fetching classrooms:", err);
+        res.status(500).json({ message: "Failed to fetch classrooms" });
+    }
+};
+
 exports.getStream = async (req, res) => {
-  const { classroomId } = req.params;
+    const { classroomId } = req.params;
 
-  const classroom = await Classroom.findById(classroomId);
-  if (!classroom) return res.status(404).json({ error: 'Classroom not found' });
+    try {
+        const streamUrl = await classroomService.getStream(classroomId);
+        res.status(200).json({ streamUrl });
+    } catch (err) {
+        console.error("Error fetching stream:", err);
+        res.status(500).json({ message: "Failed to fetch stream" });
+    }
+};
 
-  const isStudent = classroom.students.some(
-    studentId => studentId.toString() === req.user.id
-  );
+exports.startStream = async (req, res) => {
+    const { classroomId } = req.params;
+    const { streamUrl } = req.body;
 
-  if (!isStudent && classroom.teacher.toString() !== req.user.id)
-    return res.status(403).json({ error: 'Access denied' });
+    try {
+        const classroom = await classroomService.startStream(classroomId, streamUrl);
+        res.status(200).json(classroom);
+    } catch (err) {
+        console.error("Error starting stream:", err);
+        res.status(500).json({ message: "Failed to start stream" });
+    }
+};
 
-  res.json({ streamUrl: classroom.streamUrl });
+exports.addStudent = async (req, res) => {
+    const { classroomId } = req.params;
+    const { studentId } = req.body;
+
+    try {
+        const classroom = await classroomService.addStudent(classroomId, studentId);
+        res.status(200).json(classroom);
+    } catch (err) {
+        console.error("Error adding student:", err);
+        res.status(500).json({ message: "Failed to add student to classroom" });
+    }
 };

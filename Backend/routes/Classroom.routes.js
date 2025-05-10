@@ -10,4 +10,6 @@ router.post('/:classroomId/start', authTeacher, classroomController.startStream)
 // Student or teacher accesses the stream
 router.get('/:classroomId/stream', authUser, classroomController.getStream);
 
+router.post("/create", authTeacher, classroomController.createClassroom);
+
 module.exports = router;

@@ -1,79 +1,71 @@
-const Classroom = require('../models/Classroom');
+const Classroom = require('../models/Classroom.model');
 
-class ClassroomService {
-  async createClassroom(teacherId, name) {
+exports.createClassroom = async ({ name, subject, teacherId }) => {
     try {
-      const classroom = await Classroom.create({
-        name,
-        teacher: teacherId,
-        students: [],
-      });
-      return classroom;
-    } catch (error) {
-      throw new Error('Failed to create classroom');
+        const classroom = await Classroom.create({
+            name,
+            subject,
+            teacher: teacherId,
+            students: [],
+        });
+        return classroom;
+    } catch (err) {
+        console.error("Error in Classroom Service - createClassroom:", err);
+        throw new Error("Failed to create classroom");
     }
-  }
+};
 
-  async addStudent(classroomId, studentId) {
+exports.getClassroomsByTeacherId = async (teacherId) => {
     try {
-      const classroom = await Classroom.findById(classroomId);
-      if (!classroom) {
-        throw new Error('Classroom not found');
-      }
+        const classrooms = await Classroom.find({ teacher: teacherId });
+        return classrooms;
+    } catch (err) {
+        console.error("Error in Classroom Service - getClassroomsByTeacherId:", err);
+        throw new Error("Failed to fetch classrooms");
+    }
+};
 
-      if (!classroom.students.includes(studentId)) {
-        classroom.students.push(studentId);
+exports.getStream = async (classroomId) => {
+    try {
+        const classroom = await Classroom.findById(classroomId);
+        if (!classroom) {
+            throw new Error("Classroom not found");
+        }
+        return classroom.streamUrl || "No active stream";
+    } catch (err) {
+        console.error("Error in Classroom Service - getStream:", err);
+        throw new Error("Failed to fetch stream");
+    }
+};
+
+exports.startStream = async (classroomId, streamUrl) => {
+    try {
+        const classroom = await Classroom.findById(classroomId);
+        if (!classroom) {
+            throw new Error("Classroom not found");
+        }
+        classroom.streamUrl = streamUrl;
         await classroom.save();
-      }
-      return classroom;
-    } catch (error) {
-      throw new Error('Failed to add student to classroom');
+        return classroom;
+    } catch (err) {
+        console.error("Error in Classroom Service - startStream:", err);
+        throw new Error("Failed to start stream");
     }
-  }
+};
 
-  async startStream(classroomId, teacherId, streamUrl) {
+exports.addStudent = async (classroomId, studentId) => {
     try {
-      const classroom = await Classroom.findOne({
-        _id: classroomId,
-        teacher: teacherId
-      });
-
-      if (!classroom) {
-        throw new Error('Classroom not found or unauthorized');
-      }
-
-      classroom.streamUrl = streamUrl;
-      await classroom.save();
-      return classroom;
-    } catch (error) {
-      throw new Error('Failed to start stream');
+        const classroom = await Classroom.findById(classroomId);
+        if (!classroom) {
+            throw new Error("Classroom not found");
+        }
+        if (!classroom.students.includes(studentId)) {
+            classroom.students.push(studentId);
+            await classroom.save();
+        }
+        return classroom;
+    } catch (err) {
+        console.error("Error in Classroom Service - addStudent:", err);
+        throw new Error("Failed to add student to classroom");
     }
-  }
-
-  async getStream(classroomId, userId) {
-    try {
-      const classroom = await Classroom.findById(classroomId);
-      if (!classroom) {
-        throw new Error('Classroom not found');
-      }
-
-      const isStudent = classroom.students.some(
-        studentId => studentId.toString() === userId
-      );
-      const isTeacher = classroom.teacher.toString() === userId;
-
-      if (!isStudent && !isTeacher) {
-        throw new Error('Unauthorized access to stream');
-      }
-
-      return {
-        streamUrl: classroom.streamUrl,
-        isTeacher: isTeacher
-      };
-    } catch (error) {
-      throw new Error('Failed to get stream');
-    }
-  }
-}
-
-module.exports = new ClassroomService();
+};

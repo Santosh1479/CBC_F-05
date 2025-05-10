@@ -6,6 +6,7 @@ import UserSignup from "./pages/userSignup";
 import TeacherSignup from "./pages/teacherSignup";
 import TeacherLogin from "./pages/teacherLogin";
 import TeacherHome from "./pages/TeacherHome";
+import StreamPage from "./pages/StreamPage";
 import UserHome from "./pages/home";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/teacher-signup" element={<TeacherSignup />} />
         <Route path="/teacher-login" element={<TeacherLogin />} />
         <Route path="/teacher-home" element={<TeacherHome />} />
+        <Route path="/stream/:classroomId" element={<StreamPage />} />
         <Route path="/user-home" element={<UserHome />} />
       </Routes>
     </Router>

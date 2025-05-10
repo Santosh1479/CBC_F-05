@@ -27,7 +27,8 @@ export default function Login() {
       if (response.status === 200) {
         const data = response.data;
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userId", data.user._id); // Store user ID in localStorage
+        localStorage.setItem("userId", data.user._id);
+        localStorage.setItem("name", data.user.name);
         navigate("/user-home");
       }
     } catch (error) {
