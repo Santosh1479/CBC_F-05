@@ -1,5 +1,5 @@
 const Classroom = require('../models/Classroom');
-const User = require('../models/User');
+const User = require('../models/User.model');
 
 // Teacher starts stream
 exports.startStream = async (req, res) => {
