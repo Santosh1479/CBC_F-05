@@ -1,57 +1,54 @@
-const Classroom = require('../models/Classroom.model');
+const Classroom = require('../models/Classroom');
 
-exports.createClassroom = async ({ name, subject, teacherId, students = [] }) => {
-  try {
-    const classroom = await Classroom.create({
-      name,
-      subject,
-      teacher: teacherId,
-      students, // Add students array
-    });
-    return classroom;
-  } catch (err) {
-    console.error("Error in Classroom Service - createClassroom:", err);
-    throw new Error("Failed to create classroom");
+class ClassroomService {
+  async createClassroom(teacherId, name) {
+    try {
+      const classroom = await Classroom.create({
+        name,
+        teacher: teacherId,
+        students: [],
+      });
+      return classroom;
+    } catch (error) {
+      throw new Error('Failed to create classroom');
+    }
   }
-};
 
-exports.getClassroomsByTeacherId = async (teacherId) => {
+  async addStudent(classroomId, studentId) {
     try {
-        const classrooms = await Classroom.find({ teacher: teacherId });
-        return classrooms;
-    } catch (err) {
-        console.error("Error in Classroom Service - getClassroomsByTeacherId:", err);
-        throw new Error("Failed to fetch classrooms");
-    }
-};
+      const classroom = await Classroom.findById(classroomId);
+      if (!classroom) {
+        throw new Error('Classroom not found');
+      }
 
-exports.getStream = async (classroomId) => {
-    try {
-        const classroom = await Classroom.findById(classroomId);
-        if (!classroom) {
-            throw new Error("Classroom not found");
-        }
-        return classroom.streamUrl || "No active stream";
-    } catch (err) {
-        console.error("Error in Classroom Service - getStream:", err);
-        throw new Error("Failed to fetch stream");
-    }
-};
-
-exports.startStream = async (classroomId, streamUrl) => {
-    try {
-        const classroom = await Classroom.findById(classroomId);
-        if (!classroom) {
-            throw new Error("Classroom not found");
-        }
-        classroom.streamUrl = streamUrl;
+      if (!classroom.students.includes(studentId)) {
+        classroom.students.push(studentId);
         await classroom.save();
-        return classroom;
-    } catch (err) {
-        console.error("Error in Classroom Service - startStream:", err);
-        throw new Error("Failed to start stream");
+      }
+      return classroom;
+    } catch (error) {
+      throw new Error('Failed to add student to classroom');
     }
-};
+  }
+
+  async startStream(classroomId, teacherId, streamUrl) {
+    try {
+      const classroom = await Classroom.findOne({
+        _id: classroomId,
+        teacher: teacherId
+      });
+
+      if (!classroom) {
+        throw new Error('Classroom not found or unauthorized');
+      }
+
+      classroom.streamUrl = streamUrl;
+      await classroom.save();
+      return classroom;
+    } catch (error) {
+      throw new Error('Failed to start stream');
+    }
+  }
 
 const User = require('../models/User.model'); // Assuming the User model is defined
 

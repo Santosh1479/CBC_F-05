@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function TeacherLogin() {
@@ -59,9 +59,6 @@ export default function TeacherLogin() {
             Signup
           </button>
         </div>
-          <Link to={"/login"} className="text-white bg-green-500">
-            User Login
-          </Link>
       </div>
     </div>
   );

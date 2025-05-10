@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Link } from "react-router-dom";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -127,9 +126,6 @@ export default function Register() {
             Log In
           </button>
         </div>
-        <Link to={"/teacher-signup"} className="text-white bg-red-300">
-            Teacher Signup
-          </Link>
       </div>
     </div>
   );

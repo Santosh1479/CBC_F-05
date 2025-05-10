@@ -1,0 +1,63 @@
+Quiz on: IOT DESIGN METHODOLOGY
+--------------------------------------------------
+Q1. Which of the following is the first phase in the IoT Design Methodology?
+a) Prototyping
+b) Requirements
+c) Deployment
+d) Detailed Design
+Answer: b) Requirements
+
+Q2. Which layer in the IoT architecture is responsible for data storage and analysis?
+a) Perception Layer
+b) Network Layer
+c) Application Layer
+d) Data Management Layer
+Answer: d) Data Management Layer
+
+Q3. What does the acronym "MQTT" stand for in the context of IoT protocols?
+a) Message Queueing Telemetry Transport
+b) Message Queuing Text Transfer
+c) Medium Query Telemetry Transport
+d) Message Queue Text Telecommunication
+Answer: a) Message Queueing Telemetry Transport
+
+Q4. Which of the following is a common hardware platform used for IoT prototyping?
+a) Intel Pentium
+b) Raspberry Pi
+c) NVIDIA GeForce
+d) AMD Ryzen
+Answer: b) Raspberry Pi
+
+Q5.  What is the purpose of defining Key Performance Indicators (KPIs) in IoT design?
+a) To complicate the project.
+b) To track the success of the IoT solution.
+c) To make the system more expensive.
+d) To limit user interaction.
+Answer: b) To track the success of the IoT solution.
+
+Q6.  Which security aspect addresses ensuring data has not been altered during transmission in IoT?
+a) Authentication
+b) Authorization
+c) Integrity
+d) Availability
+Answer: c) Integrity
+
+Q7.  Which of the following considerations is most important during the "Device Selection" phase of IoT design for a remote, battery-powered sensor?
+a) Processing Power
+b) Memory Capacity
+c) Power Consumption
+d) Display Size
+Answer: c) Power Consumption
+
+Q8. Which architectural pattern focuses on event-driven communication and loosely coupled components in IoT systems?
+a) Layered Architecture
+b) Microservices Architecture
+c) Client-Server Architecture
+d) Monolithic Architecture
+Answer: b) Microservices Architecture
+
+Q9. Describe the role of "Edge Computing" in IoT and why it is becoming increasingly important.
+Answer: Edge computing involves processing data closer to the source of the data (e.g., the IoT devices themselves) rather than sending it all to a central cloud server. It reduces latency, conserves bandwidth, improves security, and enables real-time decision-making, which is crucial for applications like autonomous vehicles and industrial automation.
+
+Q10. Explain the importance of considering scalability during the design phase of an IoT project. What are two strategies that can be employed to ensure scalability?
+Answer: Scalability is critical to ensure an IoT system can handle a growing number of devices, increasing data volumes, and evolving user demands without performance degradation or system failures. Two strategies for ensuring scalability are: 1) Utilizing cloud-based infrastructure for flexible resource allocation and management. 2) Implementing a microservices architecture to decouple functionalities and allow independent scaling of individual components.

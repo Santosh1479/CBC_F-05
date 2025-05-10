@@ -51,16 +51,20 @@ exports.startStream = async (req, res) => {
   const { classroomId } = req.params;
   const { streamUrl } = req.body;
 
-  try {
-    const classroom = await classroomService.startStream(classroomId, streamUrl);
-    res.status(200).json(classroom);
-  } catch (err) {
-    console.error("Error starting stream:", err);
-    res.status(500).json({ message: "Failed to start stream" });
-  }
+  const classroom = await Classroom.findById(classroomId);
+  if (!classroom) return res.status(404).json({ error: 'Classroom not found' });
+
+  if (classroom.teacher.toString() !== req.user.id)
+    return res.status(403).json({ error: 'Unauthorized' });
+
+  classroom.streamUrl = streamUrl;
+  await classroom.save();
+
+  res.json({ message: 'Stream started', streamUrl });
 };
 
-exports.addStudent = async (req, res) => {
+// Student accesses stream
+exports.getStream = async (req, res) => {
   const { classroomId } = req.params;
   const { email } = req.body;
 

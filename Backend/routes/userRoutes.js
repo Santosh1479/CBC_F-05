@@ -8,11 +8,6 @@ const { authUser } = require('../middleware/authMiddleware');
 // Example route to get user data (protected route)
 router.get('/data', authUser, userController.getUserData);
 
-router.get("/profile", authUser, (req, res) => {
-    res.json({ message: "Access granted", user: req.user });
-});
-
-
 // Example route for user registration
 router.post(
     '/register',

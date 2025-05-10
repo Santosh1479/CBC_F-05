@@ -1,5 +1,3 @@
-const http = require("http");
-const { Server } = require("socket.io");
 const app = require("./app");
 const dotenv = require("dotenv");
 const connectDB = require("./DB/db");
