@@ -1,53 +1,74 @@
 const userModel = require('../models/User.model');
-const userservice = require('../services/User.service');
-const { validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const blacklistTokenModel = require('../models/blackListToken.model');
+const bcrypt = require('bcrypt');
 
 
-module.exports.registerUser = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+module.exports.registerUser = async (req, res) => {
+    try {
+        const { name, email, password, usn, branch, semester } = req.body;
+
+        if (!name || !email || !password || !usn || !branch || !semester) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        const existingUser = await userModel.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+
+        // Hash the password before saving
+        const hashedPassword = await userModel.hashPassword(password);
+
+        const user = await userModel.create({
+            name,
+            email,
+            password: hashedPassword, // Save the hashed password
+            usn,
+            branch,
+            semester,
+        });
+
+        // Generate a JWT token
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+        res.status(201).json({ message: "User registered successfully", token, user });
+    } catch (error) {
+        console.error("Error in registerUser:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
+};
 
-    const { fullname, email, password } = req.body;
 
-    const hashedpass = await userModel.hashPassword(password);
+module.exports.loginuser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-    const user = await userservice.createUser({
-        firstname: fullname.firstname,
-        lastname: fullname.lastname,
-        email,
-        password: hashedpass
-    });
+        if (!email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
 
-    const token = user.generateAuthToken();
+        // Check if the user exists
+        const user = await userModel.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
 
-    res.status(201).json({ token, user })
-}
+        // Compare the password
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
 
-module.exports.loginuser = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        // Generate a JWT token
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+        res.status(200).json({ message: "Login successful", token, user });
+    } catch (error) {
+        console.error("Error in loginuser:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-
-    const { email, password } = req.body;
-    const user = await userModel.findOne({ email }).select('+password');
-    if (!user) {
-        return res.status(401).json({ message: 'invalid Email or Password' });
-    }
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-        return res.status(401).json({ message: 'invalid Email or Password' });
-    }
-
-    const token = user.generateAuthToken();
-
-    res.cookie('token', token)
-
-    res.status(200).json({ token, user });
-}
+};
 
 module.exports.getUserData = async (req, res) => {
     try {

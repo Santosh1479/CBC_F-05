@@ -10,23 +10,23 @@ router.get('/data', authUser, userController.getUserData);
 
 // Example route for user registration
 router.post(
-  '/register',
-  [
-    body('name').notEmpty().withMessage('Name is required'),
-    body('email').isEmail().withMessage('Invalid email'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  ],
-  userController.registerUser
+    '/register',
+    [
+        body('name').notEmpty().withMessage('Name is required'),
+        body('email').isEmail().withMessage('Invalid email'),
+        body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    ],
+    userController.registerUser
 );
 
 // Example route for user login
 router.post(
-  '/login',
-  [
-    body('email').isEmail().withMessage('Invalid email'),
-    body('password').notEmpty().withMessage('Password is required'),
-  ],
-  userController.loginuser
+    '/login',
+    [
+        body('email').isEmail().withMessage('Invalid email'),
+        body('password').notEmpty().withMessage('Password is required'),
+    ],
+    userController.loginuser
 );
 
 module.exports = router;

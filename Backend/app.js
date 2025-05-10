@@ -11,8 +11,8 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use("/api/users", userRoutes);
-app.use("/api/classrooms", classroomRoutes);
+app.use("/users", userRoutes);
+app.use("classrooms", classroomRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is running...");

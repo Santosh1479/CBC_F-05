@@ -14,17 +14,20 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/register`, {
-        name,
-        usn,
-        email,
-        password,
-        branch,
-        semester,
-      });
-      localStorage.setItem("token", res.data.token);
+      const res = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/users/register`,
+        {
+          name,
+          email,
+          password,
+          usn,
+          branch,
+          semester,
+        }
+      );
+      localStorage.setItem("token", res.data.token); // Store the token
       alert("Registered successfully!");
-      navigate("/dashboard");
+      navigate("/user-home");
     } catch (err) {
       alert(err.response?.data?.message || "Registration failed");
     }
@@ -33,8 +36,12 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-green-50 to-blue-100">
       <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-extrabold text-center text-green-700 mb-2">SmartEdu</h2>
-        <p className="text-center text-gray-600 mb-6">Create your account to get started</p>
+        <h2 className="text-3xl font-extrabold text-center text-green-700 mb-2">
+          SmartEdu
+        </h2>
+        <p className="text-center text-gray-600 mb-6">
+          Create your account to get started
+        </p>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <input
