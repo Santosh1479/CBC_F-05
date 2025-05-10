@@ -49,9 +49,7 @@ class ClassroomService {
       throw new Error('Failed to start stream');
     }
   }
-
-const User = require('../models/User.model'); // Assuming the User model is defined
-
+}
 // Find a student by email
 exports.findStudentByEmail = async (email) => {
   try {
