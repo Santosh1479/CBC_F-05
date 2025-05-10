@@ -1,5 +1,5 @@
-const Classroom = require('../models/Classroom');
-const User = require('../models/User.model');
+// filepath: c:\Users\Santosh\Desktop\CBC_F-05\Backend\controllers\Classroom.controller.js
+const Classroom = require('../models/Classroom.model');
 
 // Teacher starts stream
 exports.startStream = async (req, res) => {

@@ -1,4 +1,4 @@
-const userModel = require('../models/user.models');
+const userModel = require('../models/User.model');
 const userservice = require('../services/User.service');
 const { validationResult } = require('express-validator');
 const blacklistTokenModel = require('../models/blackListToken.model');
@@ -49,10 +49,14 @@ module.exports.loginuser = async (req, res, next) => {
     res.status(200).json({ token, user });
 }
 
-module.exports.getUserProfile = async (req, res, next) => {
-    res.status(200).json(req.user);
-}
-
+module.exports.getUserData = async (req, res) => {
+    try {
+        const user = req.user; // Assuming `authUser` middleware attaches the user to `req`
+        res.status(200).json({ user });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch user data" });
+    }
+};
 
 module.exports.logoutUser = async (req, res, next) => {
     res.clearCookie('token');
