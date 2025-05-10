@@ -34,7 +34,7 @@ const Home = () => {
 
     // Extract class ID from the link (assuming the link contains a class ID)
     const classId = classLink.split("/").pop(); // Adjust based on your link structure
-    navigate(`/stream/${classId}`); // Redirect to the stream page
+    navigate(`/classroom/${classId}`); // Redirect to the stream page
   };
 
   // Fetch classrooms where the student is enrolled
@@ -104,7 +104,7 @@ const Home = () => {
               <div
                 key={classroom._id}
                 className="p-4 bg-white shadow-md rounded-lg cursor-pointer hover:bg-gray-100"
-                onClick={() => navigate(`/stream/${classroom._id}`)} // Redirect to stream page
+                onClick={() => navigate(`/classroom/${classroom._id}`)} // Redirect to stream page
               >
                 <h3 className="text-lg font-bold text-gray-800">
                   {classroom.name}

@@ -7,7 +7,7 @@ import TeacherSignup from "./pages/teacherSignup";
 import TeacherLogin from "./pages/teacherLogin";
 import TeacherHome from "./pages/TeacherHome";
 import UserHome from "./pages/home";
-import Classroom from "./pages/StreamPage"
+import StreamPage from "./pages/StreamPage";
 
 function App() {
   return (
@@ -15,12 +15,12 @@ function App() {
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/login" element={<UserLogin />} />
-        <Route path="/classroom/:classroomId" element={<Classroom />}/>
         <Route path="/register" element={<UserSignup />} />
         <Route path="/teacher-signup" element={<TeacherSignup />} />
         <Route path="/teacher-login" element={<TeacherLogin />} />
         <Route path="/teacher-home" element={<TeacherHome />} />
         <Route path="/user-home" element={<UserHome />} />
+        <Route path="/classroom/:classroomId" element={<StreamPage />} />
       </Routes>
     </Router>
   );

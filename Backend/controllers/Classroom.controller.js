@@ -1,6 +1,8 @@
 const classroomService = require('../services/Classroom.services');
 const Classroom = require('../models/Classroom.model');
+const User = require('../models/User.model'); // Assuming you have a User model
 
+// Create a new classroom
 exports.createClassroom = async (req, res) => {
   const { name, subject, students, teacherId } = req.body;
 
@@ -17,6 +19,7 @@ exports.createClassroom = async (req, res) => {
   }
 };
 
+// Get classrooms by teacher ID
 exports.getClassroomsByTeacherId = async (req, res) => {
   const { teacherId } = req.params;
 
@@ -29,6 +32,34 @@ exports.getClassroomsByTeacherId = async (req, res) => {
   }
 };
 
+// Get classrooms by student ID
+exports.getClassroomsByStudentId = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const classrooms = await classroomService.getClassroomsByStudentId(userId);
+    res.status(200).json(classrooms);
+  } catch (err) {
+    console.error("Error fetching classrooms:", err);
+    res.status(500).json({ message: "Failed to fetch classrooms" });
+  }
+};
+
+// Start a stream for a classroom
+exports.startStream = async (req, res) => {
+  const { classroomId } = req.params;
+  const { streamUrl } = req.body;
+
+  try {
+    const classroom = await classroomService.startStream(classroomId, streamUrl);
+    res.status(200).json({ message: "Stream started successfully", classroom });
+  } catch (err) {
+    console.error("Error starting stream:", err);
+    res.status(500).json({ message: "Failed to start stream" });
+  }
+};
+
+// Get the stream for a classroom
 exports.getStream = async (req, res) => {
   const { classroomId } = req.params;
 
@@ -45,38 +76,7 @@ exports.getStream = async (req, res) => {
   }
 };
 
-exports.startStream = async (req, res) => {
-  const { classroomId } = req.params;
-  const { streamUrl } = req.body;
-
-  try {
-    const classroom = await classroomService.startStream(classroomId, streamUrl);
-    res.status(200).json({ message: "Stream started successfully", classroom });
-  } catch (err) {
-    console.error("Error starting stream:", err);
-    res.status(500).json({ message: "Failed to start stream" });
-  }
-};
-
-exports.getClassroomsByStudentId = async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    const classrooms = await classroomService.getClassroomsByStudentId(userId);
-    const classroomsWithLiveStatus = classrooms.map((classroom) => ({
-      _id: classroom._id,
-      name: classroom.name,
-      subject: classroom.subject,
-      teacher: classroom.teacher,
-      isLive: !!classroom.streamUrl,
-    }));
-    res.status(200).json(classroomsWithLiveStatus);
-  } catch (err) {
-    console.error("Error fetching classrooms for student:", err);
-    res.status(500).json({ message: "Failed to fetch classrooms" });
-  }
-};
-
+// Add a student to a classroom
 exports.addStudent = async (req, res) => {
   const { classroomId } = req.params;
   const { email } = req.body;
@@ -86,12 +86,24 @@ exports.addStudent = async (req, res) => {
   }
 
   try {
-    const student = await classroomService.findStudentByEmail(email);
+    const student = await User.findOne({ email});
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    const classroom = await classroomService.addStudent(classroomId, student._id);
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ message: "Classroom not found" });
+    }
+
+    // Check if the student is already in the classroom
+    if (classroom.students.includes(student._id)) {
+      return res.status(400).json({ message: "Student is already in the classroom" });
+    }
+
+    classroom.students.push(student._id);
+    await classroom.save();
+
     res.status(200).json({ message: "Student added successfully", classroom });
   } catch (err) {
     console.error("Error adding student:", err);

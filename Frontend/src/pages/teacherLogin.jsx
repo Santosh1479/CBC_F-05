@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 export default function TeacherLogin() {
@@ -10,7 +10,10 @@ export default function TeacherLogin() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/teachers/login`, { email, password });
+      const res = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/teachers/login`,
+        { email, password }
+      );
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("id", res.data.teacher._id);
       localStorage.setItem("name", res.data.teacher.name);
@@ -25,7 +28,9 @@ export default function TeacherLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-yellow-50 to-orange-100">
       <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-extrabold text-center text-orange-700 mb-2">Teacher Login</h2>
+        <h2 className="text-3xl font-extrabold text-center text-orange-700 mb-2">
+          Teacher Login
+        </h2>
         <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
@@ -59,6 +64,12 @@ export default function TeacherLogin() {
             Signup
           </button>
         </div>
+        <Link
+          to="/login"
+          className="text-indigo-600 hover:underline font-medium"
+        >
+          User Login
+        </Link>
       </div>
     </div>
   );
