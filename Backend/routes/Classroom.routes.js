@@ -1,15 +1,24 @@
-// filepath: c:\Users\Santosh\Desktop\CBC_F-05\Backend\routes\Classroom.routes.js
 const express = require('express');
 const router = express.Router();
 const classroomController = require('../controllers/Classroom.controller');
-const { authTeacher, authUser } = require('../middleware/authMiddleware');
+const { authUser } = require('../middleware/authMiddleware'); // Import authUser middleware
 
 // Teacher starts a stream
-router.post('/:classroomId/start', authTeacher, classroomController.startStream);
+router.post('/:classroomId/start', classroomController.startStream);
 
-// Student or teacher accesses the stream
+// Student or teacher accesses the stream (with authUser middleware)
 router.get('/:classroomId/stream', authUser, classroomController.getStream);
 
-router.post("/create", authTeacher, classroomController.createClassroom);
+// Create a new classroom
+router.post('/create', classroomController.createClassroom);
+
+// Fetch classrooms by teacher ID
+router.get('/teacher/:teacherId', classroomController.getClassroomsByTeacherId);
+
+// Fetch classrooms by student ID
+router.get('/student/:userId', classroomController.getClassroomsByStudentId);
+
+// Add a student to a classroom
+router.post('/:classroomId/add-student', classroomController.addStudent);
 
 module.exports = router;

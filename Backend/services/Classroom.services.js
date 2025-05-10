@@ -1,18 +1,18 @@
 const Classroom = require('../models/Classroom.model');
 
-exports.createClassroom = async ({ name, subject, teacherId }) => {
-    try {
-        const classroom = await Classroom.create({
-            name,
-            subject,
-            teacher: teacherId,
-            students: [],
-        });
-        return classroom;
-    } catch (err) {
-        console.error("Error in Classroom Service - createClassroom:", err);
-        throw new Error("Failed to create classroom");
-    }
+exports.createClassroom = async ({ name, subject, teacherId, students = [] }) => {
+  try {
+    const classroom = await Classroom.create({
+      name,
+      subject,
+      teacher: teacherId,
+      students, // Add students array
+    });
+    return classroom;
+  } catch (err) {
+    console.error("Error in Classroom Service - createClassroom:", err);
+    throw new Error("Failed to create classroom");
+  }
 };
 
 exports.getClassroomsByTeacherId = async (teacherId) => {
@@ -68,4 +68,14 @@ exports.addStudent = async (classroomId, studentId) => {
         console.error("Error in Classroom Service - addStudent:", err);
         throw new Error("Failed to add student to classroom");
     }
+};
+
+exports.getClassroomsByStudentId = async (userId) => {
+  try {
+      const classrooms = await Classroom.find({ students: userId }).populate('teacher', 'name');
+      return classrooms;
+  } catch (err) {
+      console.error("Error in Classroom Service - getClassroomsByStudentId:", err);
+      throw new Error("Failed to fetch classrooms");
+  }
 };
