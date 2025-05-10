@@ -4,12 +4,12 @@ import axios from "axios";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [usn, setUsn] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [branch, setBranch] = useState("");
-  const [semester, setSemester] = useState("");
+  const [name, setName] = useState("test");
+  const [usn, setUsn] = useState("TEST");
+  const [email, setEmail] = useState("test@test.com");
+  const [password, setPassword] = useState("testpass");
+  const [branch, setBranch] = useState("ECE");
+  const [semester, setSemester] = useState("1");
 
   const handleRegister = async (e) => {
     e.preventDefault();

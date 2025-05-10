@@ -4,8 +4,8 @@ import axios from "axios";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("test@teac.com");
+  const [password, setPassword] = useState("testpass");
 
   const handleLogin = async (e) => {
     e.preventDefault();
