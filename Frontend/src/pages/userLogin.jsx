@@ -15,7 +15,7 @@ export default function Login() {
     try {
       const res = await axios.post('/users/login', { email, password });
       login(res.data.token);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       alert(err.response?.data?.message || 'Login failed');
     }
