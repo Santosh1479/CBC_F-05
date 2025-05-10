@@ -1,224 +1,3 @@
-// import React, { useState, useEffect } from "react";
-// import { useNavigate } from "react-router-dom";
-// import axios from "axios";
-
-// export default function TeacherHome() {
-//   const navigate = useNavigate();
-//   const name = localStorage.getItem("name");
-//   const teacherId = localStorage.getItem("id");
-//   const [classrooms, setClassrooms] = useState([]);
-//   const [selectedClassroom, setSelectedClassroom] = useState(null);
-//   const [streamTitle, setStreamTitle] = useState("");
-//   const [streamLink, setStreamLink] = useState("");
-//   const [showForm, setShowForm] = useState(false); // Define showForm state
-//   const [newClassroom, setNewClassroom] = useState({ name: "", subject: "" }); // Define newClassroom state
-
-//   // Fetch classrooms created by the teacher
-//   useEffect(() => {
-//     const fetchClassrooms = async () => {
-//       try {
-//         const token = localStorage.getItem("token");
-//         const res = await axios.get(
-//           `${import.meta.env.VITE_BASE_URL}/classrooms?teacherId=${teacherId}`,
-//           {
-//             headers: { Authorization: `Bearer ${token}` },
-//           }
-//         );
-//         setClassrooms(res.data);
-//       } catch (err) {
-//         console.error("Error fetching classrooms:", err);
-//       }
-//       setClassrooms([
-//         {
-//           _id: "dummy1",
-//           name: "Math 101",
-//           subject: "Mathematics",
-//           teacher: teacherId,
-//           students: [],
-//           streamUrl: null,
-//         },
-//         {
-//           _id: "dummy2",
-//           name: "Physics 201",
-//           subject: "Physics",
-//           teacher: teacherId,
-//           students: [],
-//           streamUrl: null,
-//         },
-//       ]);
-//     };
-
-//     fetchClassrooms();
-//   }, [teacherId]);
-
-//   const handleCreateClassroom = async (e) => {
-//     e.preventDefault();
-//     try {
-//       const token = localStorage.getItem("token");
-//       const res = await axios.post(
-//         `${import.meta.env.VITE_BASE_URL}/classrooms`,
-//         newClassroom,
-//         {
-//           headers: { Authorization: `Bearer ${token}` },
-//         }
-//       );
-//       setClassrooms([...classrooms, res.data]); // Add the new classroom to the list
-//       setNewClassroom({ name: "", subject: "" }); // Reset the form
-//       setShowForm(false); // Close the form
-//       alert("Classroom created successfully!");
-//     } catch (err) {
-//       console.error("Error creating classroom:", err);
-//       alert(err.response?.data?.message || "Failed to create classroom");
-//     }
-//   };
-
-//   // Handle logout
-//   const handleLogout = () => {
-//     localStorage.removeItem("token");
-//     localStorage.removeItem("id");
-//     localStorage.removeItem("name");
-//     alert("Logged out successfully!");
-//     navigate("/teacher-login");
-//   };
-
-//   // Generate Stream Link
-//   const handleGenerateLink = () => {
-//     if (!streamTitle) {
-//       alert("Please enter a stream title.");
-//       return;
-//     }
-//     const generatedLink = `${window.location.origin}/stream/${
-//       selectedClassroom._id
-//     }?title=${encodeURIComponent(streamTitle)}`;
-//     setStreamLink(generatedLink);
-//   };
-
-//   // Handle starting the stream
-//   const handleStartStream = () => {
-//     if (!streamTitle || !streamLink) {
-//       alert(
-//         "Please complete all fields and generate the link before starting the stream."
-//       );
-//       return;
-//     }
-
-//     // Redirect to the stream page
-//     navigate(`/stream/${selectedClassroom._id}`, { state: { streamTitle } });
-//   };
-
-//   return (
-//     <div className="min-h-screen flex flex-col">
-//       {/* Header Section */}
-//       <div className="bg-gray-800 text-white p-4 flex justify-between items-center">
-//         <h1 className="text-2xl font-bold">Welcome, {name}!</h1>
-//         <button
-//           onClick={() => {
-//             localStorage.clear();
-//             navigate("/teacher-login");
-//           }}
-//           className="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition"
-//         >
-//           Logout
-//         </button>
-//       </div>
-
-//       {/* Main Content */}
-//       <div className="flex flex-col flex-1">
-//         {/* Left Section: Create Classroom */}
-//         <div className="w-1/4 bg-gray-100 flex flex-col items-center justify-center p-4">
-//           {!showForm ? (
-//             <div
-//               className="w-24 h-24 bg-white shadow-lg rounded-full flex items-center justify-center text-4xl font-bold text-green-600 cursor-pointer hover:bg-green-100"
-//               onClick={() => setShowForm(true)}
-//             >
-//               +
-//             </div>
-//           ) : (
-//             <form
-//               onSubmit={handleCreateClassroom}
-//               className="bg-white shadow-lg rounded-lg p-4 w-full"
-//             >
-//               <h3 className="text-lg font-bold text-gray-800 mb-2">
-//                 Create Classroom
-//               </h3>
-//               <input
-//                 type="text"
-//                 placeholder="Classroom Name"
-//                 value={newClassroom.name}
-//                 onChange={(e) =>
-//                   setNewClassroom({ ...newClassroom, name: e.target.value })
-//                 }
-//                 className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2"
-//                 required
-//               />
-//               <input
-//                 type="text"
-//                 placeholder="Subject"
-//                 value={newClassroom.subject}
-//                 onChange={(e) =>
-//                   setNewClassroom({ ...newClassroom, subject: e.target.value })
-//                 }
-//                 className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2"
-//                 required
-//               />
-//               <div className="flex justify-between">
-//                 <button
-//                   type="submit"
-//                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-//                 >
-//                   Create
-//                 </button>
-//                 <button
-//                   type="button"
-//                   onClick={() => setShowForm(false)}
-//                   className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-//                 >
-//                   Cancel
-//                 </button>
-//               </div>
-//             </form>
-//           )}
-//         </div>
-
-//         {/* Bottom Section: Display Created Classrooms */}
-//         <div className="flex-1 bg-white p-8">
-//           <h2 className="text-xl font-semibold text-gray-700 mb-6">
-//             Your Created Classrooms:
-//           </h2>
-
-//           {classrooms.length > 0 ? (
-//             <div className="grid grid-cols-3 gap-4">
-//               {classrooms.map((classroom) => (
-//                 <div
-//                   key={classroom._id}
-//                   className="p-4 bg-gray-100 shadow-md rounded-lg cursor-pointer hover:bg-gray-200"
-//                   onClick={() => {
-//                     setSelectedClassroom(classroom);
-//                     setStreamTitle("");
-//                     setStreamLink("");
-//                   }}
-//                 >
-//                   <h3 className="text-lg font-bold text-gray-800">
-//                     {classroom.name}
-//                   </h3>
-//                   <p className="text-sm text-gray-600">
-//                     Subject: {classroom.subject}
-//                   </p>
-//                   <p className="text-sm text-gray-600">
-//                     Students: {classroom.students?.length || 0}
-//                   </p>
-//                 </div>
-//               ))}
-//             </div>
-//           ) : (
-//             <p className="text-gray-600">No classrooms created yet.</p>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -229,27 +8,20 @@ export default function TeacherHome() {
   const teacherId = localStorage.getItem("id");
   const [classrooms, setClassrooms] = useState([]);
   const [selectedClassroom, setSelectedClassroom] = useState(null);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [studentEmail, setStudentEmail] = useState("");
   const [streamTitle, setStreamTitle] = useState("");
   const [streamLink, setStreamLink] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [newClassroom, setNewClassroom] = useState({
-    name: "",
-    subject: "",
-    teacher: "",
-  });
+  const [showStreamModal, setShowStreamModal] = useState(false);
+  const [newClassroom, setNewClassroom] = useState({ name: "", subject: "" });
 
   // Fetch classrooms created by the teacher
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
-        const Id = localStorage.getItem("id");
-        setNewClassroom({ ...newClassroom, teacher: Id });
-        const token = localStorage.getItem("token");
         const res = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}/classrooms/teacher/${teacherId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          `${import.meta.env.VITE_BASE_URL}/classrooms/teacher/${teacherId}`
         );
         setClassrooms(res.data);
       } catch (err) {
@@ -263,20 +35,10 @@ export default function TeacherHome() {
   const handleCreateClassroom = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("token");
-      const teacherId = localStorage.getItem("id"); // Get teacher ID from localStorage
       const res = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/classrooms/create`,
-        {
-          ...newClassroom,
-          teacherId, // Explicitly include teacher ID
-          students: [], // Optional: Add student IDs here if needed
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }, // Optional: Include token if needed
-        }
+        { ...newClassroom, teacherId }
       );
-  
       setClassrooms([...classrooms, res.data]);
       setNewClassroom({ name: "", subject: "" });
       setShowForm(false);
@@ -300,12 +62,32 @@ export default function TeacherHome() {
 
   const handleStartStream = () => {
     if (!streamTitle || !streamLink) {
-      alert(
-        "Please complete all fields and generate the link before starting the stream."
-      );
+      alert("Please generate the link before starting the stream.");
       return;
     }
     navigate(`/stream/${selectedClassroom._id}`, { state: { streamTitle } });
+  };
+
+  const handleAddStudent = async () => {
+    if (!studentEmail) {
+      alert("Please enter a valid email.");
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/classrooms/${
+          selectedClassroom._id
+        }/add-student`,
+        { email: studentEmail }
+      );
+      alert("Student added successfully!");
+      setShowAddStudentModal(false);
+      setStudentEmail("");
+    } catch (err) {
+      console.error("Error adding student:", err);
+      alert(err.response?.data?.message || "Failed to add student");
+    }
   };
 
   return (
@@ -380,34 +162,126 @@ export default function TeacherHome() {
           )}
         </div>
 
-        {/* Display Classrooms Section */}
-        <div className="p-4">
-          <h2 className="text-xl font-bold mb-4">Your Created Classrooms</h2>
-          {classrooms.length > 0 ? (
-            <div className="grid grid-cols-3 gap-4">
-              {classrooms.map((classroom) => (
-                <div
-                  key={classroom._id}
-                  className="p-4 bg-gray-100 rounded-lg shadow-md cursor-pointer"
-                  onClick={() => {
-                    setSelectedClassroom(classroom);
-                    setStreamTitle("");
-                    setStreamLink("");
-                  }}
+        {showStreamModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={() => setShowStreamModal(false)} // Close modal when clicking outside
+          >
+            <div
+              className="bg-white p-6 rounded-lg shadow-lg z-60"
+              onClick={(e) => e.stopPropagation()} // Prevent click propagation
+            >
+              <h3 className="text-lg font-bold mb-4">Start Stream</h3>
+              <input
+                type="text"
+                placeholder="Enter Stream Title"
+                value={streamTitle}
+                onChange={(e) => setStreamTitle(e.target.value)} // Update stream title state
+                className="w-full px-4 py-2 border rounded-lg mb-4"
+                required
+              />
+              <div className="flex justify-between">
+                <button
+                  onClick={handleGenerateLink} // Generate the stream link
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
                 >
-                  <h3 className="text-lg font-bold">{classroom.name}</h3>
-                  <p className="text-sm">Subject: {classroom.subject}</p>
-                  <p className="text-sm">
-                    Students: {classroom.students?.length || 0}
-                  </p>
-                </div>
-              ))}
+                  Generate Link
+                </button>
+                <button
+                  onClick={handleStartStream} // Start the stream
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                >
+                  Start Stream
+                </button>
+                <button
+                  onClick={() => setShowStreamModal(false)} // Close the modal
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                >
+                  Cancel
+                </button>
+              </div>
+              {streamLink && (
+                <p className="mt-4 text-sm text-gray-600">
+                  Stream Link: <a href={streamLink}>{streamLink}</a>
+                </p>
+              )}
             </div>
-          ) : (
-            <p>No classrooms created yet.</p>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Display Classrooms Section */}
+        {!showStreamModal && (
+          <div className="p-4">
+            <h2 className="text-xl font-bold mb-4">Your Created Classrooms</h2>
+            {classrooms.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4">
+                {classrooms.map((classroom) => (
+                  <div
+                    key={classroom._id}
+                    className="p-4 bg-gray-100 rounded-lg shadow-md relative cursor-pointer"
+                    onClick={() => {
+                      setSelectedClassroom(classroom); // Set the selected classroom
+                      setShowStreamModal(true); // Show the stream modal
+                    }}
+                  >
+                    <h3 className="text-lg font-bold">{classroom.name}</h3>
+                    <p className="text-sm">Subject: {classroom.subject}</p>
+                    <p className="text-sm">
+                      Students: {classroom.students?.length || 0}
+                    </p>
+                    {/* Three-dot menu */}
+                    <div className="absolute top-2 text-2xl right-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent triggering the modal
+                          setSelectedClassroom(classroom); // Set the selected classroom
+                          setShowAddStudentModal(true); // Show the modal to add a student
+                        }}
+                        className="text-gray-600 hover:text-gray-800"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No classrooms created yet.</p>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Add Student Modal */}
+      {showAddStudentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-bold mb-4">Add Student</h3>
+            <input
+              type="email"
+              placeholder="Enter student email"
+              value={studentEmail}
+              onChange={(e) => setStudentEmail(e.target.value)} // Update email state
+              className="w-full px-4 py-2 border rounded-lg mb-4"
+              required
+            />
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={handleAddStudent} // Call the function to add the student
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => setShowAddStudentModal(false)} // Close the modal
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
