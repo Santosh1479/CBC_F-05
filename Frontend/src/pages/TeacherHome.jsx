@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { io } from "socket.io-client";
+const socket = io(`${import.meta.env.VITE_BASE_URL}`);
 
 export default function TeacherHome() {
   const navigate = useNavigate();
@@ -32,6 +34,7 @@ export default function TeacherHome() {
     fetchClassrooms();
   }, [teacherId]);
 
+
   const handleCreateClassroom = async (e) => {
     e.preventDefault();
     try {
@@ -49,6 +52,16 @@ export default function TeacherHome() {
     }
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("id");
+    localStorage.removeItem("name");
+    localStorage.removeItem("role");
+    alert("Logged out successfully!");
+    navigate("/teacher-login");
+  };
+
   const handleGenerateLink = () => {
     if (!streamTitle) {
       alert("Please enter a stream title.");
@@ -61,11 +74,16 @@ export default function TeacherHome() {
   };
 
   const handleStartStream = () => {
-    if (!streamTitle || !streamLink) {
-      alert("Please generate the link before starting the stream.");
+    if (!streamTitle) {
+      alert("Please enter a stream title.");
       return;
     }
     navigate(`/stream/${selectedClassroom._id}`, { state: { streamTitle } });
+    socket.emit("startStream", selectedClassroom._id); // Notify students
+  };
+
+  const handleStopStream = () => {
+    socket.emit("stopStream", selectedClassroom._id); // Notify students
   };
 
   const handleAddStudent = async () => {
@@ -73,7 +91,6 @@ export default function TeacherHome() {
       alert("Please enter a valid email.");
       return;
     }
-
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/classrooms/${

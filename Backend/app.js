@@ -5,6 +5,8 @@ const userRoutes = require("./routes/userRoutes");
 const classroomRoutes = require("./routes/Classroom.routes");
 const teacherRoutes = require("./routes/Teacher.routes");
 
+dotenv.config();
+
 const app = express();
 
 // Middleware
@@ -15,7 +17,6 @@ app.use(express.json());
 app.use("/users", userRoutes);
 app.use("/classrooms", classroomRoutes);
 app.use("/teachers", teacherRoutes);
-
 
 app.get("/", (req, res) => {
   res.send("API is running...");

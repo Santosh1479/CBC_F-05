@@ -12,6 +12,7 @@ const Home = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     localStorage.removeItem("name");
+    localStorage.removeItem("role");
     alert("Logged out successfully!");
     navigate("/login");
   };
@@ -33,7 +34,7 @@ const Home = () => {
 
     // Extract class ID from the link (assuming the link contains a class ID)
     const classId = classLink.split("/").pop(); // Adjust based on your link structure
-    navigate(`/classroom/${classId}`);
+    navigate(`/stream/${classId}`); // Redirect to the stream page
   };
 
   // Fetch classrooms where the student is enrolled
@@ -60,8 +61,11 @@ const Home = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
-      {/* Logout Button */}
-      <div className="p-4 flex justify-end bg-white shadow-md">
+      {/* Header Section */}
+      <div className="p-4 flex justify-between bg-white shadow-md">
+        <h1 className="text-2xl font-bold text-gray-800">
+          Welcome to Your Dashboard
+        </h1>
         <button
           onClick={handleLogout}
           className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
@@ -91,17 +95,23 @@ const Home = () => {
 
       {/* Bottom Section: Your Classrooms */}
       <div className="flex-1 p-8">
-        <h2 className="text-xl font-semibold text-gray-700 mb-6">Your Classrooms:</h2>
+        <h2 className="text-xl font-semibold text-gray-700 mb-6">
+          Your Classrooms:
+        </h2>
         {classrooms.length > 0 ? (
           <div className="grid grid-cols-3 gap-4">
             {classrooms.map((classroom) => (
               <div
                 key={classroom._id}
                 className="p-4 bg-white shadow-md rounded-lg cursor-pointer hover:bg-gray-100"
-                onClick={() => navigate(`/classroom/${classroom._id}`)}
+                onClick={() => navigate(`/stream/${classroom._id}`)} // Redirect to stream page
               >
-                <h3 className="text-lg font-bold text-gray-800">{classroom.name}</h3>
-                <p className="text-sm text-gray-600">Subject: {classroom.subject}</p>
+                <h3 className="text-lg font-bold text-gray-800">
+                  {classroom.name}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Subject: {classroom.subject}
+                </p>
                 <p className="text-sm text-gray-600">
                   Teacher: {classroom.teacher?.name || "Unknown"}
                 </p>
@@ -109,7 +119,9 @@ const Home = () => {
             ))}
           </div>
         ) : (
-          <p className="text-gray-600">You are not enrolled in any classrooms.</p>
+          <p className="text-gray-600">
+            You are not enrolled in any classrooms.
+          </p>
         )}
       </div>
     </div>

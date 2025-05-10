@@ -29,6 +29,7 @@ export default function Register() {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.user._id); 
       localStorage.setItem("name", res.data.user.name); 
+      localStorage.setItem("role", "student");
       alert("Registered successfully!");
       navigate("/user-home");
     } catch (err) {

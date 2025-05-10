@@ -29,6 +29,7 @@ export default function Login() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user._id);
         localStorage.setItem("name", data.user.name);
+        localStorage.setItem("role", "student");
         navigate("/user-home");
       }
     } catch (error) {

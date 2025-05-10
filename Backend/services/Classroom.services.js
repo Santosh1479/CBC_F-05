@@ -53,21 +53,38 @@ exports.startStream = async (classroomId, streamUrl) => {
     }
 };
 
+const User = require('../models/User.model'); // Assuming the User model is defined
+
+// Find a student by email
+exports.findStudentByEmail = async (email) => {
+  try {
+    const student = await User.findOne({ email });
+    return student;
+  } catch (err) {
+    console.error("Error in Classroom Service - findStudentByEmail:", err);
+    throw new Error("Failed to find student by email");
+  }
+};
+
+// Add a student to a classroom
 exports.addStudent = async (classroomId, studentId) => {
-    try {
-        const classroom = await Classroom.findById(classroomId);
-        if (!classroom) {
-            throw new Error("Classroom not found");
-        }
-        if (!classroom.students.includes(studentId)) {
-            classroom.students.push(studentId);
-            await classroom.save();
-        }
-        return classroom;
-    } catch (err) {
-        console.error("Error in Classroom Service - addStudent:", err);
-        throw new Error("Failed to add student to classroom");
+  try {
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      throw new Error("Classroom not found");
     }
+
+    // Check if the student is already in the classroom
+    if (!classroom.students.includes(studentId)) {
+      classroom.students.push(studentId);
+      await classroom.save();
+    }
+
+    return classroom;
+  } catch (err) {
+    console.error("Error in Classroom Service - addStudent:", err);
+    throw new Error("Failed to add student to classroom");
+  }
 };
 
 exports.getClassroomsByStudentId = async (userId) => {

@@ -7,7 +7,7 @@ const { authUser } = require('../middleware/authMiddleware'); // Import authUser
 router.post('/:classroomId/start', classroomController.startStream);
 
 // Student or teacher accesses the stream (with authUser middleware)
-router.get('/:classroomId/stream', authUser, classroomController.getStream);
+router.get('/:classroomId/stream', classroomController.getStream);
 
 // Create a new classroom
 router.post('/create', classroomController.createClassroom);
