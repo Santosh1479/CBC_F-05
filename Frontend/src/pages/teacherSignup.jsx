@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "../utils/api";
+import axios from "axios";
 
 export default function TeacherSignup() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ export default function TeacherSignup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("/teachers/register", { name, email, password });
+      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/teachers/register`, { name, email, password });
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("id", res.data.teacher._id);
       localStorage.setItem("name", res.data.teacher.name);

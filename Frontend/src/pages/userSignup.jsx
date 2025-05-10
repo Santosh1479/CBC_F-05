@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "../utils/api";
+import axios from "axios";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("/users/register", {
+      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/register`, {
         name,
         usn,
         email,

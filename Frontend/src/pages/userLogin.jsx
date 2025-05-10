@@ -1,7 +1,7 @@
 // src/pages/Login.js
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from '../utils/api';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -13,7 +13,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/users/login', { email, password });
+      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/login`, { email, password });
       login(res.data.token);
       navigate('/home');
     } catch (err) {
