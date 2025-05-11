@@ -1,8 +1,9 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { io } from "socket.io-client";
+import {io} from "socket.io-client";
 
-const socket = io(`${import.meta.env.VITE_BASE_URL}`);
+const socket = io(import.meta.env.VITE_BASE_URL);
 
 export default function StreamPage() {
   const location = useLocation(); // Get state passed from TeacherHome
@@ -15,6 +16,8 @@ export default function StreamPage() {
   const [isLive, setIsLive] = useState(false);
   const [isPaused, setIsPaused] = useState(false); // State to track pause/resume
   const [error, setError] = useState(null); // State to handle errors
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [messages, setMessages] = useState([]);
 
   // Determine if the user is a teacher
   useEffect(() => {
@@ -33,7 +36,7 @@ export default function StreamPage() {
             video: true,
             audio: true,
           });
-          console.log("Media devices accessed successfully.");
+        console.log("Media devices accessed successfully.");
           localStreamRef.current.srcObject = localStream; // Set the teacher's local stream
         } catch (err) {
           console.error("Error accessing media devices:", err);
@@ -47,6 +50,18 @@ export default function StreamPage() {
     };
 
     initializeStream();
+
+    const togglePlayPause = () => {
+      if (videoRef.current) {
+        if (isPaused) {
+          videoRef.current.play();
+          setIsPaused(false);
+        } else {
+          videoRef.current.pause();
+          setIsPaused(true);
+        }
+      }
+    };
 
     return () => {
       // Cleanup: Stop all tracks when the component unmounts
@@ -83,8 +98,8 @@ export default function StreamPage() {
       if (!res.ok) {
         throw new Error("Failed to fetch the stream");
       }
-      const mediaStream = await res.body.getReader().read(); 
-      console.log('media',mediaStream);
+      const mediaStream = await res.body.getReader().read();
+      console.log("media", mediaStream);
       const blob = new Blob([mediaStream], { type: "video/webm" });
       const streamUrl = URL.createObjectURL(blob);
       videoRef.current.srcObject = streamUrl; // Set the student's video stream
@@ -123,37 +138,57 @@ export default function StreamPage() {
     navigate("/teacher-home"); // Redirect to Teacher Home
   };
 
+  // Fetch emotion data from Flask API
+  useEffect(() => {
+    const fetchEmotion = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/monitor");
+        const data = await response.json();
+        if (data.emotion) {
+          setMessages((prevMessages) => [...prevMessages, `Emotion: ${data.emotion}`]);
+        }
+      } catch (error) {
+        console.error("Error fetching emotion data:", error);
+      }
+    };
+
+    const interval = setInterval(fetchEmotion, 5000); // Fetch emotion every 2 seconds
+    return () => clearInterval(interval); // Cleanup on component unmount
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1d0036] to-[#6A29FF] text-white">
       {/* Header Section */}
       <div className="bg-gray-800 text-white p-4">
         <h1 className="text-2xl font-bold">{streamTitle || "Live Stream"}</h1>
       </div>
 
-      {/* Video Section */}
-      <div className="flex-1 flex items-center justify-center bg-gray-100">
-        {error ? (
-          <p className="text-red-600">{error}</p>
-        ) : isTeacher ? (
-          <video
-            ref={localStreamRef}
-            autoPlay
-            muted
-            className="w-3/4 h-3/4 bg-black rounded-lg"
-          ></video>
-        ) : isLive ? (
-          <video
+      <div className="flex-1 flex flex-col items-center bg-gray-100 p-6">
+        <video
             ref={videoRef}
-            autoPlay
+            src="/demo.mp4" // Use a relative path from the public folder
             controls
-            className="w-3/4 h-3/4 bg-black rounded-lg"
+            autoPlay
+            loop
+            className="w-full h-1/2 max-w-5xl bg-black rounded-lg"
           ></video>
-        ) : (
-          <p className="text-gray-600">The stream is not live yet.</p>
-        )}
       </div>
 
-      {/* Teacher Controls */}
+      {/* Message Box Section */}
+      <div className="p-4 bg-white/10 backdrop-blur-lg border border-white/20 shadow-md rounded-lg w-full max-w-4xl mx-auto">
+        <h2 className="text-lg font-bold mb-4">Emotion Monitoring</h2>
+        <div className="space-y-2 max-h-40 overflow-y-auto">
+          {messages.length > 0 ? (
+            messages.map((msg, index) => (
+              <p key={index} className="text-gray-300 bg-gray-800 p-2 rounded-lg">
+                {msg}
+              </p>
+            ))
+          ) : (
+            <p className="text-gray-400">No emotions detected yet.</p>
+          )}
+        </div>
+      </div>
       {isTeacher && (
         <div className="p-4 flex justify-between">
           <button

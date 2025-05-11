@@ -4,6 +4,7 @@ const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const classroomRoutes = require("./routes/Classroom.routes");
 const teacherRoutes = require("./routes/Teacher.routes");
+const studyRoutes = require("./routes/subject.routes");
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/users", userRoutes);
 app.use("/classrooms", classroomRoutes);
 app.use("/teachers", teacherRoutes);
+app.use("/study",studyRoutes)
 
 app.get("/", (req, res) => {
   res.send("API is running...");

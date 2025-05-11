@@ -1,4 +1,3 @@
-// src/pages/Login.js
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,33 +6,42 @@ import { useAuth } from "../context/AuthContext";
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState("test@test.com");
+
+  const [email, setEmail] = useState("test3@test.com");
   const [password, setPassword] = useState("testpass");
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const userData = {
-      email: email,
-      password: password,
-    };
-
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/users/login`,
-        userData
+      const response = await axios.post(`
+        ${import.meta.env.VITE_BASE_URL}/users/login`,
+        { email, password }
       );
 
       if (response.status === 200) {
-        const data = response.data;
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userId", data.user._id);
-        localStorage.setItem("name", data.user.name);
-        localStorage.setItem("role", "student");
-        navigate("/user-home");
+        const { user, token } = response.data;
+
+        // Save to context
+        login(user, token);
+
+        // Save to localStorage (optional if context already handles this)
+        localStorage.setItem("token", token);
+        localStorage.setItem("userId", user._id);
+        localStorage.setItem("name", user.name);
+        localStorage.setItem("role", "user");
+        localStorage.setItem("branch", user.branch );
+        localStorage.setItem("semester", user.semester);
+
+        // Redirect based on role
+        if (user.role === "teacher") {
+          navigate("/teacher-home");
+        } else {
+          navigate("/user-home");
+        }
       }
     } catch (error) {
-      console.error("Error during login:", error);
+      console.error("Login failed:", error.response?.data || error.message);
     }
 
     setEmail("");
@@ -41,12 +49,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-100">
-      <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-extrabold text-center text-indigo-700 mb-2">
-          SmartEdu
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1d0036] to-[#6A29FF] px-4">
+      <div className="w-full max-w-md bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl p-8 animate-fade-in">
+        <h2 className="text-4xl font-bold text-white text-center mb-2 drop-shadow-lg">
+          Login
         </h2>
-        <p className="text-center text-gray-600 mb-6">
+        <p className="text-center text-gray-300 mb-6">
           Log in to continue your learning journey
         </p>
 
@@ -56,7 +64,7 @@ export default function Login() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 bg-white/20 border border-white/30 rounded-lg placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-violet-400"
             required
           />
           <input
@@ -64,29 +72,30 @@ export default function Login() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 bg-white/20 border border-white/30 rounded-lg placeholder-gray-200 text-white focus:outline-none focus:ring-2 focus:ring-violet-400"
             required
           />
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-semibold"
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2 rounded-lg font-semibold transition-all duration-300 shadow-lg"
           >
             Log In
           </button>
         </form>
 
-        <div className="mt-4 text-center text-sm text-gray-600">
+        <div className="mt-4 text-center text-sm text-gray-300">
           Don’t have an account?{" "}
           <button
             onClick={() => navigate("/register")}
-            className="text-indigo-600 hover:underline font-medium"
+            className="text-violet-300 hover:underline font-medium"
           >
             Register
           </button>
         </div>
+
         <Link
           to="/teacher-login"
-          className="text-indigo-600 hover:underline font-medium"
+          className="block mt-4 text-center text-sm text-white bg-red-500 hover:bg-red-600 rounded-lg py-2 transition duration-300 shadow-md"
         >
           Teacher Login
         </Link>
