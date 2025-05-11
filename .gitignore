@@ -1,8 +1,2 @@
-# Ignore everything
-/*
-!.gitignore
-
-# Allow AI and sample_results directories
-!AI/
-!sample_results/
-!Web_sracping/
+node_modules/
+*.env
