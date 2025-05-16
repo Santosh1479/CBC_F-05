@@ -31,7 +31,7 @@ const FocusDetection = () => {
           <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden mb-3">
             <div
               className={`h-full ${getColor()}`}
-              style={`{ width: ${focusLevel}%, transition: 'width 0.5s ease-in-out' }`}
+              style={{ width: `${focusLevel}%`, transition: 'width 0.5s ease-in-out' }}
             ></div>
           </div>
           <p className="text-2xl font-bold text-gray-800">{focusLevel}%</p>

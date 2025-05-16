@@ -15,7 +15,7 @@ const Start = () => {
         {/* Image Section */}
         <div className="w-full sm:w-1/2 p-4 mb-6 sm:mb-0">
           <img
-            src="/images/front.jpg" // Replace with actual image link
+            src="/images/start.jpg" // Replace with actual image link
             alt="Smart Learning"
             className="rounded-lg shadow-md w-full"
           />

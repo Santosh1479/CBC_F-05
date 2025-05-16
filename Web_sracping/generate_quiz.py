@@ -161,10 +161,18 @@
 
 # if __name__ == '__main__':
 #     app.run(debug=True, port=5000)
-
-
+import os
+from flask import Flask, jsonify, request, send_from_directory
 import requests
 import time
+import json
+
+# Flask app setup
+app = Flask(__name__)
+
+# Output folder for storing JSON files
+OUTPUT_FOLDER = "output"
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Gemini API configuration
 GEMINI_API_KEY = "AIzaSyAhjr73Uw64RBkAiLz7BX1O-rIJ9s7Unfs"
@@ -194,7 +202,7 @@ Only output the quiz. Do not explain anything."""
 
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {GEMINI_API_KEY}'
+      
     }
 
     data = {
@@ -227,24 +235,26 @@ def generate_content(topic):
 The content should be around 500 words and should be informative, well-structured, and easy to understand. Avoid unnecessary jargon and keep the tone professional."""
 
     headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {GEMINI_API_KEY}'
+        'Content-Type': 'application/json'
     }
 
     data = {
-        "messages": [
-            {
-                "author": "user",
-                "content": prompt
-            }
-        ]
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
     }
 
     try:
-        response = requests.post(GEMINI_API_URL, headers=headers, json=data)
+        response = requests.post(
+            f"{GEMINI_API_URL}?key={GEMINI_API_KEY}",
+            headers=headers,
+            json=data
+        )
+        
         if response.status_code == 200:
             result = response.json()
-            content_text = result['candidates'][0]['content']
+            # Extract the generated text from Gemini's response
+            content_text = result['candidates'][0]['content']['parts'][0]['text']
             return content_text
         else:
             print(f"Error: {response.status_code}")
@@ -321,35 +331,47 @@ def conduct_quiz(questions):
     
     return score, total_questions
 
-def main():
-    print("\n📚 VTU Quiz and Content Generator using Google Gemini\n")
-    topic = input("Enter topic: ").strip()
-    choice = input("Do you want to generate a quiz or content? (quiz/content): ").strip().lower()
-    
+@app.route('/generate/<string:topic>', methods=['POST'])
+def generate(topic):
+    """Endpoint to generate either a quiz or content based on user choice"""
+    data = request.json
+    choice = data.get('choice', '').lower()
+
     if choice == 'quiz':
-        print("\n⌛ Generating quiz...")
+        print(f"Generating quiz for topic: {topic}")
         quiz_text = generate_quiz(topic)
         if quiz_text:
             questions = parse_quiz(quiz_text)
-            score, total = conduct_quiz(questions)
-            
-            print("\n" + "=" * 50)
-            print(f"Quiz completed! Your score: {score}/{total}")
-            percentage = (score / total) * 100
-            print(f"Percentage: {percentage:.1f}%")
+            # Save the quiz to a JSON file
+            output_file = os.path.join(OUTPUT_FOLDER, f"{topic}_quiz.json")
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump({"topic": topic, "questions": questions}, f, indent=4)
+            return jsonify({"message": f"Quiz saved to {output_file}", "filename": f"{topic}_quiz.json"}), 200
         else:
-            print("\n❌ Failed to generate quiz. Please try again.")
+            return jsonify({"error": "Failed to generate quiz. Please check the server logs for details."}), 500
+
     elif choice == 'content':
-        print("\n⌛ Generating content...")
+        print(f"Generating content for topic: {topic}")
         content_text = generate_content(topic)
         if content_text:
-            print("\n📝 Generated Content:")
-            print("=" * 50)
-            print(content_text)
+            # Save the content to a JSON file
+            output_file = os.path.join(OUTPUT_FOLDER, f"{topic}_content.json")
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump({"topic": topic, "content": content_text}, f, indent=4)
+            return jsonify({"message": f"Content saved to {output_file}", "filename": f"{topic}_content.json"}), 200
         else:
-            print("\n❌ Failed to generate content. Please try again.")
+            return jsonify({"error": "Failed to generate content. Please check the server logs for details."}), 500
+
     else:
-        print("\n❌ Invalid choice. Please enter 'quiz' or 'content'.")
+        return jsonify({"error": "Invalid choice. Please specify 'quiz' or 'content'."}), 400
+
+@app.route('/get-file/<string:filename>', methods=['GET'])
+def get_file(filename):
+    """Endpoint to serve JSON files to the frontend"""
+    try:
+        return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True, port=5000)

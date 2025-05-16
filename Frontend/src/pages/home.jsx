@@ -89,28 +89,38 @@ const Home = () => {
 
   // Conduct quiz for a selected topic
   const handleTopicClick = async (topic) => {
+    const choice = prompt("Enter 'quiz' to generate a quiz or 'content' to view content:");
+  
+    if (!choice || (choice.toLowerCase() !== 'quiz' && choice.toLowerCase() !== 'content')) {
+      alert("Invalid choice. Please enter 'quiz' or 'content'.");
+      return;
+    }
+  
     try {
-      const res = await axios.get(`http://127.0.0.1:5000/quiz/${topic}`);
-      const quiz = res.data.questions;
-
-      let score = 0;
-      for (const question of quiz) {
-        const userAnswer = prompt(
-          `${question.question}\n${question.options?.join("\n") || ""}`
-        );
-        if (userAnswer && userAnswer.trim() === question.correct) {
-          score++;
+      const res = await axios.post(`http://127.0.0.1:5000/generate/${topic}`, { choice }, {
+        headers: {
+          'Content-Type': 'application/json'
         }
+      });
+      if (choice.toLowerCase() === 'quiz') {
+        const quiz = res.data.quiz;
+        let score = 0;
+        for (const question of quiz) {
+          const userAnswer = prompt(
+            `${question.question}\n${question.options?.join("\n") || ""}`
+          );
+          if (userAnswer && userAnswer.trim() === question.correct) {
+            score++;
+          }
+        }
+        alert(`Quiz completed! Your score: ${score}/${quiz.length}`);
+      } else if (choice.toLowerCase() === 'content') {
+        const content = res.data.content;
+        alert(`Content for topic "${topic}":\n\n${content}`);
       }
-
-      alert(`Quiz completed! Your score: ${score}/${quiz.length}`);
-      setQuizScore(score); // Store the score in state
-
-      // Redirect to learn.jsx
-      navigate("/learn", { state: { topic, score } });
     } catch (err) {
-      console.error("Error conducting quiz:", err);
-      alert("Failed to conduct quiz. Please try again later.");
+      console.error("Error handling topic click:", err);
+      alert("Failed to fetch data. Please try again later.");
     }
   };
 

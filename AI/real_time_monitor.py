@@ -216,13 +216,25 @@ def predict_head_pose(frame):
 @app.route('/monitor', methods=['GET'])
 def monitor():
     """API endpoint to monitor emotions and head pose."""
+    # Capture a fresh frame from the webcam
     ret, frame = cap.read()
     if not ret:
         return jsonify({"error": "Failed to capture frame"}), 500
 
-    emotion = predict_emotion(frame)
-    head_pose = predict_head_pose(frame)
-    return jsonify({"emotion": emotion, "head_pose": head_pose})
+    try:
+        # Predict emotion and head pose for the current frame
+        emotion = predict_emotion(frame)
+        head_pose = predict_head_pose(frame)
+
+        # Log predictions for debugging
+        print(f"[DEBUG] Emotion: {emotion}, Head Pose: {head_pose}")
+
+        # Return predictions as JSON
+        return jsonify({"emotion": emotion, "head_pose": head_pose}), 200
+    except Exception as e:
+        # Handle any prediction errors
+        print(f"[ERROR] Prediction failed: {str(e)}")
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500 
 
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
