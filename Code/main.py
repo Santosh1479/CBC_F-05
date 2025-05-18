@@ -1,121 +1,83 @@
-from flask import Flask, jsonify
 import cv2
-import dlib
-from imutils import face_utils
-from scipy.spatial import distance as dist
-from gaze_tracking import GazeTracking
-import time
-import os
+import torch
+import torchvision.transforms as transforms
+from PIL import Image
+from torchvision import models
 
-app = Flask(__name__)
+# Labels
+gaze_emotion_labels = ['Attentive', 'Looking Away', 'Bored', 'Confused']
 
-def eye_aspect_ratio(eye):
-    """Calculate the Eye Aspect Ratio (EAR)."""
-    A = dist.euclidean(eye[1], eye[5])
-    B = dist.euclidean(eye[2], eye[4])
-    C = dist.euclidean(eye[0], eye[3])
-    ear = (A + B) / (2.0 * C)
-    return ear
+# Define the Gaze Emotion Model Architecture
+class GazeEmotionModel(torch.nn.Module):
+    def __init__(self):
+        super(GazeEmotionModel, self).__init__()
+        self.model = models.resnet18(weights=None)  # Ensure this matches the training architecture
+        self.model.fc = torch.nn.Linear(self.model.fc.in_features, len(gaze_emotion_labels))  # Adjust output layer
 
-@app.route('/start_webcam', methods=['GET'])
-def start_webcam():
-    """
-    Start the webcam, detect emotions in real-time, and save one image with the detected emotion.
-    """
-    # Thresholds and constants
-    EYE_AR_THRESH = 0.3
-    EYE_AR_CONSEC_FRAMES = 48
-    COUNTER = 0
+    def forward(self, x):
+        return self.model(x)
 
-    # Initialize dlib's face detector and facial landmarks predictor
-    detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor(r'c:\Users\Santosh\OneDrive\Desktop\CBC_F-05\Code\shape_predictor_68_face_landmarks.dat')
-    (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-    (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
+# Initialize the model
+gaze_emotion_model = GazeEmotionModel()
 
-    # Initialize gaze tracking
-    gaze = GazeTracking()
+# Load the state dictionary into the model
+state_dict = torch.load(r'c:\Users\Santosh\OneDrive\Desktop\CBC_F-05\AI\best_model.pt', map_location=torch.device('cpu'))
+gaze_emotion_model.load_state_dict(state_dict, strict=False)  # Allow partial loading
 
-    # Start webcam
+# Set the model to evaluation mode
+gaze_emotion_model.eval()
+
+# Preprocessing
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+])
+
+def capture_and_evaluate():
+    """Capture a single frame, predict gaze emotion, and save the frame."""
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        return jsonify({"status": "error", "message": "Unable to access webcam."})
+        print("Error: Unable to access webcam.")
+        return
 
-    print("Press 's' to save the current frame and 'q' to quit the webcam.")
-    saved_image_path = "emotion_frame.jpg"  # Path to save the single image
+    ret, frame = cap.read()
+    if not ret:
+        print("Error: Unable to capture frame from webcam.")
+        cap.release()
+        return
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    # Preprocess the frame
+    img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    img_tensor = transform(img_pil)
 
-        # Resize and convert to grayscale
-        frame = cv2.resize(frame, (640, 480))
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # Predict gaze emotion
+    with torch.no_grad():
+        outputs = gaze_emotion_model(img_tensor.unsqueeze(0))
+        _, predicted = torch.max(outputs, 1)
+        emotion = gaze_emotion_labels[predicted.item()]
 
-        # Detect faces
-        rects = detector(gray, 0)
+    # Write the prediction on the frame
+    cv2.putText(frame, f"Emotion: {emotion}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        for rect in rects:
-            # Get facial landmarks
-            shape = predictor(gray, rect)
-            shape = face_utils.shape_to_np(shape)
-
-            # Calculate EAR for both eyes
-            leftEye = shape[lStart:lEnd]
-            rightEye = shape[rStart:rEnd]
-            leftEAR = eye_aspect_ratio(leftEye)
-            rightEAR = eye_aspect_ratio(rightEye)
-            ear = (leftEAR + rightEAR) / 2.0
-
-            # Check for drowsiness
-            emotion = None
-            if ear < EYE_AR_THRESH:
-                COUNTER += 1
-                if COUNTER >= EYE_AR_CONSEC_FRAMES:
-                    emotion = "Bored"
-            else:
-                COUNTER = 0
-
-            # Gaze detection
-            gaze.refresh(frame)
-            if gaze.is_right():
-                emotion = "Looking Away"
-            elif gaze.is_left():
-                emotion = "Looking Away"
-            elif gaze.is_center():
-                emotion = "Attentive"
-            else:
-                emotion = "Confused"
-
-            # Write the detected emotion on the frame
-            if emotion:
-                cv2.putText(frame, f"Emotion: {emotion}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-        # Display the frame
-        cv2.imshow("Webcam", frame)
-
-        # Save the frame with the detected emotion when 's' is pressed
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('s'):
-            # Save the frame and replace the previous one
-            cv2.imwrite(saved_image_path, frame)
-            print(f"Emotion frame saved as: {saved_image_path}")
-
-        # Break the loop if 'q' is pressed
-        if key == ord('q'):
-            break
+    # Save the frame
+    saved_image_path = "captured_frame.jpg"
+    cv2.imwrite(saved_image_path, frame)
+    print(f"Emotion: {emotion}")
+    print(f"Frame saved as: {saved_image_path}")
 
     cap.release()
-    cv2.destroyAllWindows()
-    return jsonify({"status": "success", "message": "Webcam stopped."})
-
-@app.route('/')
-def home():
-    """
-    Home route to verify the server is running.
-    """
-    return jsonify({"message": "Flask server is running!"})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    print("Press 'c' to capture and evaluate a frame.")
+    print("Press 'q' to quit the program.")
+
+    while True:
+        user_input = input("Enter your choice: ").strip().lower()
+        if user_input == 'c':
+            capture_and_evaluate()
+        elif user_input == 'q':
+            print("Exiting the program.")
+            break
+        else:
+            print("Invalid input. Please press 'c' to capture or 'q' to quit.")
