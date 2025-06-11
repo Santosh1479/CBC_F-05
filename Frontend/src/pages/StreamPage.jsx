@@ -1,9 +1,6 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {io} from "socket.io-client";
-
-const socket = io(import.meta.env.VITE_BASE_URL);
+import { useSocket } from "../context/SocketContext";
 
 export default function StreamPage() {
   const location = useLocation(); // Get state passed from TeacherHome
@@ -12,12 +9,15 @@ export default function StreamPage() {
   const { streamTitle } = location.state || {}; // Get stream title from state
   const localStreamRef = useRef(null); // For teacher's local stream
   const videoRef = useRef(null); // For student's video stream
+  const pcRef = useRef(null); // Use a top-level ref!
+  const negotiatingRef = useRef(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [isPaused, setIsPaused] = useState(false); // State to track pause/resume
   const [error, setError] = useState(null); // State to handle errors
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [messages, setMessages] = useState([]);
+  const socket = useSocket();
 
   // Determine if the user is a teacher
   useEffect(() => {
@@ -27,88 +27,118 @@ export default function StreamPage() {
 
   // Initialize WebRTC and capture video for teachers
   useEffect(() => {
-    const initializeStream = async () => {
-      console.log("Initializing stream...");
-      if (isTeacher) {
-        console.log("User is a teacher. Accessing media devices...");
-        try {
-          const localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          });
-        console.log("Media devices accessed successfully.");
-          localStreamRef.current.srcObject = localStream; // Set the teacher's local stream
-        } catch (err) {
-          console.error("Error accessing media devices:", err);
-          setError(
-            "Unable to access your camera or microphone. Please check your browser settings."
-          );
-        }
-      } else {
-        console.log("User is a student. Waiting for the stream...");
-      }
-    };
+    let isMounted = true;
 
-    initializeStream();
-
-    const togglePlayPause = () => {
-      if (videoRef.current) {
-        if (isPaused) {
-          videoRef.current.play();
-          setIsPaused(false);
-        } else {
-          videoRef.current.pause();
-          setIsPaused(true);
-        }
-      }
-    };
-
-    return () => {
-      // Cleanup: Stop all tracks when the component unmounts
-      const stream = localStreamRef.current?.srcObject;
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        localStreamRef.current.srcObject = null;
-      }
-    };
-  }, [isTeacher]);
-
-  // Listen for stream status updates
-  useEffect(() => {
-    socket.on("streamStatus", ({ classroomId: id, isLive }) => {
-      if (id === classroomId) {
-        setIsLive(isLive);
-        if (!isTeacher && isLive) {
-          fetchStream(); // Fetch the stream when it goes live
-        }
-      }
-    });
-
-    return () => {
-      socket.off("streamStatus"); // Clean up the listener
-    };
-  }, [classroomId, isTeacher]);
-
-  // Fetch the stream for students
-  const fetchStream = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/classrooms/${classroomId}/stream`
-      );
-      if (!res.ok) {
-        throw new Error("Failed to fetch the stream");
-      }
-      const mediaStream = await res.body.getReader().read();
-      console.log("media", mediaStream);
-      const blob = new Blob([mediaStream], { type: "video/webm" });
-      const streamUrl = URL.createObjectURL(blob);
-      videoRef.current.srcObject = streamUrl; // Set the student's video stream
-      console.log("Stream fetched successfully.");
-    } catch (err) {
-      console.error("Error fetching stream:", err);
-      setError("Failed to fetch the stream. Please try again later.");
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
     }
-  };
+
+    if (isTeacher) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+        if (!isMounted) return;
+        localStreamRef.current.srcObject = stream;
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        });
+        pcRef.current = pc;
+        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit("ice-candidate", { candidate: event.candidate, classroomId });
+          }
+        };
+
+        const watcherHandler = async () => {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit("offer", { offer, classroomId });
+        };
+        socket.on("watcher", watcherHandler);
+
+        const answerHandler = async ({ answer }) => {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        };
+        socket.on("answer", answerHandler);
+
+        const iceHandler = async ({ candidate }) => {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (e) {}
+        };
+        socket.on("ice-candidate", iceHandler);
+
+        socket.emit("broadcaster", classroomId);
+
+        // Cleanup
+        return () => {
+          pc.close();
+          socket.off("watcher", watcherHandler);
+          socket.off("answer", answerHandler);
+          socket.off("ice-candidate", iceHandler);
+        };
+      });
+    } else {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      });
+      pcRef.current = pc;
+      pc.ontrack = (event) => {
+        videoRef.current.srcObject = event.streams[0];
+      };
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("ice-candidate", { candidate: event.candidate, classroomId });
+        }
+      };
+
+      const offerHandler = async ({ offer }) => {
+        if (pc.signalingState !== "stable" || negotiatingRef.current) {
+          console.warn("Offer ignored: signalingState is", pc.signalingState, "negotiating:", negotiatingRef.current);
+          return;
+        }
+        negotiatingRef.current = true;
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit("answer", { answer, classroomId });
+        } finally {
+          negotiatingRef.current = false;
+        }
+      };
+      socket.on("offer", offerHandler);
+
+      const iceHandler = async ({ candidate }) => {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {}
+      };
+      socket.on("ice-candidate", iceHandler);
+
+      socket.emit("watcher", classroomId);
+
+      // Cleanup
+      return () => {
+        if (pcRef.current) {
+          pcRef.current.close();
+          pcRef.current = null;
+        }
+        socket.off("offer", offerHandler);
+        socket.off("ice-candidate", iceHandler);
+      };
+    }
+
+    return () => {
+      isMounted = false;
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      socket.removeAllListeners();
+    };
+  }, [isTeacher, classroomId, socket]);
 
   // Pause or Resume the stream (for teachers only)
   const toggleStream = () => {
@@ -138,24 +168,6 @@ export default function StreamPage() {
     navigate("/teacher-home"); // Redirect to Teacher Home
   };
 
-  // Fetch emotion data from Flask API
-  useEffect(() => {
-    const fetchEmotion = async () => {
-      try {
-        const response = await fetch("http://127.0.0.1:5000/monitor");
-        const data = await response.json();
-        if (data.emotion) {
-          setMessages((prevMessages) => [...prevMessages, `Emotion: ${data.emotion}`]);
-        }
-      } catch (error) {
-        console.error("Error fetching emotion data:", error);
-      }
-    };
-
-    const interval = setInterval(fetchEmotion, 5000); // Fetch emotion every 2 seconds
-    return () => clearInterval(interval); // Cleanup on component unmount
-  }, []);
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1d0036] to-[#6A29FF] text-white">
       {/* Header Section */}
@@ -164,14 +176,24 @@ export default function StreamPage() {
       </div>
 
       <div className="flex-1 flex flex-col items-center bg-gray-100 p-6">
-        <video
-            ref={videoRef}
-            src="/demo.mp4" // Use a relative path from the public folder
-            controls
+        {/* Teacher: Show their own camera stream */}
+        {isTeacher ? (
+          <video
+            ref={localStreamRef}
             autoPlay
-            loop
+            muted
+            controls
             className="w-full h-1/2 max-w-5xl bg-black rounded-lg"
           ></video>
+        ) : (
+          // Student: Show the live stream if available
+          <video
+            ref={videoRef}
+            autoPlay
+            controls
+            className="w-full h-1/2 max-w-5xl bg-black rounded-lg"
+          ></video>
+        )}
       </div>
 
       {/* Message Box Section */}

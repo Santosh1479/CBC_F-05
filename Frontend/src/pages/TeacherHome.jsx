@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { io } from "socket.io-client";
 
-const socket = io(`${import.meta.env.VITE_BASE_URL}`);
+const socket = io(`${import.meta.env.VITE_SOCKET_URL}`);
 
 export default function TeacherHome() {
   const navigate = useNavigate();
