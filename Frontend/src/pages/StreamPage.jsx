@@ -3,42 +3,42 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 
 export default function StreamPage() {
-  const location = useLocation(); // Get state passed from TeacherHome
-  const navigate = useNavigate(); // For navigation
-  const { classroomId } = useParams(); // Get classroom ID from URL
-  const { streamTitle } = location.state || {}; // Get stream title from state
-  const localStreamRef = useRef(null); // For teacher's local stream
-  const videoRef = useRef(null); // For student's video stream
-  const pcRef = useRef(null); // Use a top-level ref!
+  const location = useLocation();
+  const { classroomId } = useParams();
+  const { streamTitle } = location.state || {};
+  const localStreamRef = useRef(null);
+  const videoRef = useRef(null);
+  const pcRef = useRef(null);
   const negotiatingRef = useRef(false);
   const [isTeacher, setIsTeacher] = useState(false);
-  const [isLive, setIsLive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false); // State to track pause/resume
-  const [error, setError] = useState(null); // State to handle errors
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [loadingEmotion, setLoadingEmotion] = useState(false);
   const socket = useSocket();
 
-  // Determine if the user is a teacher
+  // Set role and userId from localStorage
   useEffect(() => {
-    const role = localStorage.getItem("role"); // Assuming role is stored in localStorage
-    setIsTeacher(role === "teacher");
+    setIsTeacher(localStorage.getItem("role") === "teacher");
+    setUserId(localStorage.getItem("userId"));
   }, []);
 
-  // Initialize WebRTC and capture video for teachers
   useEffect(() => {
-    let isMounted = true;
+    if (!userId) return;
 
+    // Cleanup previous connection if any
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
     }
 
     if (isTeacher) {
+      // TEACHER: Capture and stream video
+      let pc;
+      let watcherHandler, answerHandler, iceHandler;
+
       navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-        if (!isMounted) return;
         localStreamRef.current.srcObject = stream;
-        const pc = new RTCPeerConnection({
+        pc = new RTCPeerConnection({
           iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
         });
         pcRef.current = pc;
@@ -46,56 +46,63 @@ export default function StreamPage() {
 
         pc.onicecandidate = (event) => {
           if (event.candidate) {
-            socket.emit("ice-candidate", { candidate: event.candidate, classroomId });
+            socket.emit("ice-candidate", { candidate: event.candidate, classroomId, userId });
           }
         };
 
-        const watcherHandler = async () => {
+        // When a student joins, create and send an offer
+        watcherHandler = async ({ watcherId }) => {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
-          socket.emit("offer", { offer, classroomId });
+          socket.emit("offer", { offer, classroomId, to: watcherId });
         };
         socket.on("watcher", watcherHandler);
 
-        const answerHandler = async ({ answer }) => {
+        // Receive answer from student
+        answerHandler = async ({ answer, from }) => {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
         };
         socket.on("answer", answerHandler);
 
-        const iceHandler = async ({ candidate }) => {
+        // ICE from student
+        iceHandler = async ({ candidate, from }) => {
           try {
             await pc.addIceCandidate(new RTCIceCandidate(candidate));
           } catch (e) {}
         };
         socket.on("ice-candidate", iceHandler);
 
-        socket.emit("broadcaster", classroomId);
-
-        // Cleanup
-        return () => {
-          pc.close();
-          socket.off("watcher", watcherHandler);
-          socket.off("answer", answerHandler);
-          socket.off("ice-candidate", iceHandler);
-        };
+        socket.emit("broadcaster", { classroomId, userId });
       });
+
+      // Cleanup
+      return () => {
+        if (pc) pc.close();
+        socket.off("watcher", watcherHandler);
+        socket.off("answer", answerHandler);
+        socket.off("ice-candidate", iceHandler);
+      };
     } else {
+      // STUDENT: Only view stream
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
       });
       pcRef.current = pc;
+
       pc.ontrack = (event) => {
-        videoRef.current.srcObject = event.streams[0];
+        if (videoRef.current) {
+          videoRef.current.srcObject = event.streams[0];
+        }
       };
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          socket.emit("ice-candidate", { candidate: event.candidate, classroomId });
+          socket.emit("ice-candidate", { candidate: event.candidate, classroomId, userId });
         }
       };
 
-      const offerHandler = async ({ offer }) => {
+      // Receive offer from teacher, send answer
+      const offerHandler = async ({ offer, from }) => {
         if (pc.signalingState !== "stable" || negotiatingRef.current) {
-          console.warn("Offer ignored: signalingState is", pc.signalingState, "negotiating:", negotiatingRef.current);
           return;
         }
         negotiatingRef.current = true;
@@ -103,134 +110,89 @@ export default function StreamPage() {
           await pc.setRemoteDescription(new RTCSessionDescription(offer));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          socket.emit("answer", { answer, classroomId });
+          socket.emit("answer", { answer, classroomId, to: from });
         } finally {
           negotiatingRef.current = false;
         }
       };
       socket.on("offer", offerHandler);
 
-      const iceHandler = async ({ candidate }) => {
+      // ICE from teacher
+      const iceHandler = async ({ candidate, from }) => {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {}
       };
       socket.on("ice-candidate", iceHandler);
 
-      socket.emit("watcher", classroomId);
+      // Announce as watcher
+      socket.emit("watcher", { classroomId, watcherId: userId });
 
       // Cleanup
       return () => {
-        if (pcRef.current) {
-          pcRef.current.close();
-          pcRef.current = null;
-        }
+        pc.close();
         socket.off("offer", offerHandler);
         socket.off("ice-candidate", iceHandler);
       };
     }
+  }, [isTeacher, classroomId, socket, userId]);
 
-    return () => {
-      isMounted = false;
-      if (pcRef.current) {
-        pcRef.current.close();
-        pcRef.current = null;
+  // Handler to fetch emotion data from Flask API (on button click)
+  const fetchEmotion = async () => {
+    setLoadingEmotion(true);
+    try {
+      const response = await fetch("http://127.0.0.1:5000/monitor");
+      const data = await response.json();
+      if (data.emotion) {
+        setMessages((prev) => [...prev, `Emotion: ${data.emotion}`]);
       }
-      socket.removeAllListeners();
-    };
-  }, [isTeacher, classroomId, socket]);
-
-  // Pause or Resume the stream (for teachers only)
-  const toggleStream = () => {
-    const stream = localStreamRef.current?.srcObject;
-    if (stream) {
-      stream.getTracks().forEach((track) => {
-        if (track.enabled) {
-          track.enabled = false; // Pause the track
-          setIsPaused(true);
-        } else {
-          track.enabled = true; // Resume the track
-          setIsPaused(false);
-        }
-      });
+    } catch (error) {
+      setMessages((prev) => [...prev, "Error fetching emotion data"]);
     }
-  };
-
-  // Handle stop stream and navigate back to Teacher Home
-  const handleStopAndNavigate = async () => {
-    const stream = localStreamRef.current?.srcObject;
-    if (stream) {
-      // Stop all tracks
-      stream.getTracks().forEach((track) => track.stop());
-      localStreamRef.current.srcObject = null;
-    }
-    socket.emit("stopStream", classroomId); // Notify students that the stream has stopped
-    navigate("/teacher-home"); // Redirect to Teacher Home
+    setLoadingEmotion(false);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1d0036] to-[#6A29FF] text-white">
-      {/* Header Section */}
-      <div className="bg-gray-800 text-white p-4">
-        <h1 className="text-2xl font-bold">{streamTitle || "Live Stream"}</h1>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center bg-gray-100 p-6">
-        {/* Teacher: Show their own camera stream */}
+    <div style={{ paddingTop: "64px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      {/* Video Section */}
+      <div style={{ display: "flex", justifyContent: "center" }}>
         {isTeacher ? (
           <video
             ref={localStreamRef}
             autoPlay
             muted
             controls
-            className="w-full h-1/2 max-w-5xl bg-black rounded-lg"
-          ></video>
+            style={{ width: "80vw", maxWidth: "800px", borderRadius: "12px", background: "#000" }}
+          />
         ) : (
-          // Student: Show the live stream if available
           <video
             ref={videoRef}
             autoPlay
             controls
-            className="w-full h-1/2 max-w-5xl bg-black rounded-lg"
-          ></video>
+            style={{ width: "80vw", maxWidth: "800px", borderRadius: "12px", background: "#000" }}
+          />
         )}
       </div>
 
-      {/* Message Box Section */}
-      <div className="p-4 bg-white/10 backdrop-blur-lg border border-white/20 shadow-md rounded-lg w-full max-w-4xl mx-auto">
-        <h2 className="text-lg font-bold mb-4">Emotion Monitoring</h2>
-        <div className="space-y-2 max-h-40 overflow-y-auto">
-          {messages.length > 0 ? (
-            messages.map((msg, index) => (
-              <p key={index} className="text-gray-300 bg-gray-800 p-2 rounded-lg">
-                {msg}
-              </p>
-            ))
-          ) : (
-            <p className="text-gray-400">No emotions detected yet.</p>
-          )}
-        </div>
+      {/* Monitor Section */}
+      <div style={{ marginTop: "32px", width: "80vw", maxWidth: "800px" }}>
+        <h2>Emotion Monitoring</h2>
+        {isTeacher ? (
+          <>
+            <button onClick={fetchEmotion} disabled={loadingEmotion} style={{ marginBottom: "12px" }}>
+              {loadingEmotion ? "Checking..." : "Check Emotion"}
+            </button>
+            <div style={{ background: "#222", color: "#fff", borderRadius: "8px", padding: "12px", minHeight: "60px" }}>
+              {messages.length === 0
+                ? <span>No emotion data yet.</span>
+                : messages.map((msg, idx) => <div key={idx}>{msg}</div>)
+              }
+            </div>
+          </>
+        ) : (
+          <div style={{ width: "100%" }} />
+        )}
       </div>
-      {isTeacher && (
-        <div className="p-4 flex justify-between">
-          <button
-            onClick={toggleStream}
-            className={`${
-              isPaused
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-red-600 hover:bg-red-700"
-            } text-white px-4 py-2 rounded-lg`}
-          >
-            {isPaused ? "Resume Stream" : "Pause Stream"}
-          </button>
-          <button
-            onClick={handleStopAndNavigate}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Stop and Go to Teacher Home
-          </button>
-        </div>
-      )}
     </div>
   );
 }

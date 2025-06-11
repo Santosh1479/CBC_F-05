@@ -1,39 +1,40 @@
 const setupSocketIO = (io) => {
   io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
-
-    socket.on("broadcaster", (classroomId) => {
+    socket.on("broadcaster", ({ classroomId, userId }) => {
       socket.join(classroomId);
-      socket.to(classroomId).emit("broadcaster");
+      socket.classroomId = classroomId;
+      socket.userId = userId;
     });
 
-    socket.on("watcher", (classroomId) => {
+    socket.on("watcher", ({ classroomId, watcherId }) => {
       socket.join(classroomId);
-      socket.to(classroomId).emit("watcher");
+      socket.classroomId = classroomId;
+      socket.userId = watcherId;
+      // Notify teacher (broadcast to all in room except sender)
+      socket.to(classroomId).emit("watcher", { watcherId });
     });
 
-    socket.on("offer", ({ offer, classroomId }) => {
-      socket.to(classroomId).emit("offer", { offer });
+    socket.on("offer", ({ offer, classroomId, to }) => {
+      // Send offer to specific watcher
+      for (const [id, s] of io.of("/").sockets) {
+        if (s.userId === to && s.classroomId === classroomId) {
+          s.emit("offer", { offer, from: socket.userId });
+        }
+      }
     });
 
-    socket.on("answer", ({ answer, classroomId }) => {
-      socket.to(classroomId).emit("answer", { answer });
+    socket.on("answer", ({ answer, classroomId, to }) => {
+      // Send answer to teacher
+      for (const [id, s] of io.of("/").sockets) {
+        if (s.userId === to && s.classroomId === classroomId) {
+          s.emit("answer", { answer, from: socket.userId });
+        }
+      }
     });
 
-    socket.on("ice-candidate", ({ candidate, classroomId }) => {
-      socket.to(classroomId).emit("ice-candidate", { candidate });
-    });
-
-    socket.on("startStream", (classroomId) => {
-      io.to(classroomId).emit("streamStatus", { classroomId, isLive: true });
-    });
-
-    socket.on("stopStream", (classroomId) => {
-      io.to(classroomId).emit("streamStatus", { classroomId, isLive: false });
-    });
-
-    socket.on("disconnect", () => {
-      console.log("A user disconnected:", socket.id);
+    socket.on("ice-candidate", ({ candidate, classroomId, userId }) => {
+      // Relay ICE to everyone else in the room
+      socket.to(classroomId).emit("ice-candidate", { candidate, from: userId });
     });
   });
 };
