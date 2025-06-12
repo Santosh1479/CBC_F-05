@@ -2,6 +2,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
 
+const EMOTION_MAP = {
+  Angry: "confused",
+  Disgust: "confused",
+  Fear: "confused",
+  Sad: "bored",
+  Surprise: "bored",
+  Happy: "attentive",
+  Neutral: "attentive",
+  // Add "looking away" if you have a way to detect it
+};
+
 export default function StreamPage() {
   const location = useLocation();
   const { classroomId } = useParams();
@@ -12,14 +23,18 @@ export default function StreamPage() {
   const negotiatingRef = useRef(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState(""); // For sending to teacher
   const [messages, setMessages] = useState([]);
-  const [loadingEmotion, setLoadingEmotion] = useState(false);
+  const [studentEmotion, setStudentEmotion] = useState(null);
+  const [emotionHistory, setEmotionHistory] = useState([]);
+  const [confirmedEmotion, setConfirmedEmotion] = useState(null);
   const socket = useSocket();
 
-  // Set role and userId from localStorage
+  // Set role, userId, and userName from localStorage
   useEffect(() => {
     setIsTeacher(localStorage.getItem("role") === "teacher");
     setUserId(localStorage.getItem("userId"));
+    setUserName(localStorage.getItem("name") || "Unknown");
   }, []);
 
   useEffect(() => {
@@ -137,20 +152,75 @@ export default function StreamPage() {
     }
   }, [isTeacher, classroomId, socket, userId]);
 
-  // Handler to fetch emotion data from Flask API (on button click)
-  const fetchEmotion = async () => {
-    setLoadingEmotion(true);
-    try {
-      const response = await fetch("http://127.0.0.1:5000/monitor");
-      const data = await response.json();
-      if (data.emotion) {
-        setMessages((prev) => [...prev, `Emotion: ${data.emotion}`]);
-      }
-    } catch (error) {
-      setMessages((prev) => [...prev, "Error fetching emotion data"]);
-    }
-    setLoadingEmotion(false);
-  };
+  // Student: Capture and send frame every 2 seconds, classify, and send to teacher if needed
+  useEffect(() => {
+    if (isTeacher) return;
+
+    let intervalId;
+    const captureAndSend = async () => {
+      if (!videoRef.current || videoRef.current.readyState < 2) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const formData = new FormData();
+        formData.append("image", blob, "frame.jpg");
+        try {
+          const res = await fetch("http://127.0.0.1:5000/predict-emotion", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (data.emotion) {
+            const mapped = EMOTION_MAP[data.emotion] || "attentive";
+            setEmotionHistory((prev) => {
+              const newHistory = [...prev, mapped].slice(-5); // Keep last 5
+              // If last 5 are the same, confirm emotion
+              if (newHistory.length === 5 && newHistory.every((e) => e === newHistory[0])) {
+                if (confirmedEmotion !== newHistory[0]) {
+                  setConfirmedEmotion(newHistory[0]);
+                  setStudentEmotion(newHistory[0]);
+                  // Send to teacher if not attentive
+                  if (["confused", "bored", "looking away"].includes(newHistory[0])) {
+                    socket.emit("student-emotion", {
+                      classroomId,
+                      userId,
+                      name: userName,
+                      emotion: newHistory[0],
+                    });
+                  }
+                }
+              }
+              return newHistory;
+            });
+          }
+        } catch (e) {
+          setStudentEmotion("Error");
+        }
+      }, "image/jpeg");
+    };
+
+    intervalId = setInterval(captureAndSend, 2000);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line
+  }, [isTeacher, confirmedEmotion, userName, classroomId, socket, userId]);
+
+  // Teacher: Listen for student emotion events
+  useEffect(() => {
+    if (!isTeacher) return;
+    const handler = ({ name, emotion }) => {
+      setMessages((prev) => [
+        ...prev,
+        `${name} is ${emotion}`,
+      ]);
+    };
+    socket.on("student-emotion", handler);
+    return () => socket.off("student-emotion", handler);
+  }, [isTeacher, socket]);
 
   return (
     <div style={{ paddingTop: "64px", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -178,19 +248,16 @@ export default function StreamPage() {
       <div style={{ marginTop: "32px", width: "80vw", maxWidth: "800px" }}>
         <h2>Emotion Monitoring</h2>
         {isTeacher ? (
-          <>
-            <button onClick={fetchEmotion} disabled={loadingEmotion} style={{ marginBottom: "12px" }}>
-              {loadingEmotion ? "Checking..." : "Check Emotion"}
-            </button>
-            <div style={{ background: "#222", color: "#fff", borderRadius: "8px", padding: "12px", minHeight: "60px" }}>
-              {messages.length === 0
-                ? <span>No emotion data yet.</span>
-                : messages.map((msg, idx) => <div key={idx}>{msg}</div>)
-              }
-            </div>
-          </>
+          <div style={{ background: "#222", color: "#fff", borderRadius: "8px", padding: "12px", minHeight: "60px" }}>
+            {messages.length === 0
+              ? <span>No emotion data yet.</span>
+              : messages.map((msg, idx) => <div key={idx}>{msg}</div>)
+            }
+          </div>
         ) : (
-          <div style={{ width: "100%" }} />
+          <div style={{ background: "#222", color: "#fff", borderRadius: "8px", padding: "12px", minHeight: "60px" }}>
+            {confirmedEmotion ? `Detected Emotion: ${confirmedEmotion}` : "Detecting..."}
+          </div>
         )}
       </div>
     </div>

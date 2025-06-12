@@ -36,6 +36,10 @@ const setupSocketIO = (io) => {
       // Relay ICE to everyone else in the room
       socket.to(classroomId).emit("ice-candidate", { candidate, from: userId });
     });
+
+    socket.on("student-emotion", ({ classroomId, name, emotion }) => {
+      socket.to(classroomId).emit("student-emotion", { name, emotion });
+    });
   });
 };
 
