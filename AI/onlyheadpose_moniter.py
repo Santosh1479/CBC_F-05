@@ -14,7 +14,7 @@ model.classifier[1] = nn.Linear(model.last_channel, 3)  # pitch, yaw, roll
 model = model.to(DEVICE)
 
 
-model.load_state_dict(torch.load('C:\\Users\\user\\OneDrive\\Desktop\\CBC_F-05_origin\\AI_2\\head_pose_best_model.pt', map_location=DEVICE))
+model.load_state_dict(torch.load(r'C:\Users\Santosh\OneDrive\Desktop\CBC_F-05\AI\head_pose_best_model.pt', map_location=DEVICE))
 model.eval()
 
 
