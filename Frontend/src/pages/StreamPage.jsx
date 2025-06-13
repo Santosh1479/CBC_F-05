@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSocket } from "../context/SocketContext";
+import { FaDownload } from "react-icons/fa";
 
 const EMOTION_MAP = {
   Angry: "confused",
@@ -28,7 +29,27 @@ export default function StreamPage() {
   const [studentEmotion, setStudentEmotion] = useState(null);
   const [emotionHistory, setEmotionHistory] = useState([]);
   const [confirmedEmotion, setConfirmedEmotion] = useState(null);
+  const [selectedClassroom, setSelectedClassroom] = useState(null);
+  const [attendanceClass, setAttendanceClass] = useState(null);
+  const [attendanceDate, setAttendanceDate] = useState(null);
+  const [showAttendancePopup, setShowAttendancePopup] = useState(false);
+  const [showStreamModal, setShowStreamModal] = useState(false);
   const socket = useSocket();
+  const navigate = useNavigate();
+
+  const handleStopStream = () => {
+    socket.emit("stopStream", selectedClassroom?._id || classroomId);
+    setAttendanceClass(selectedClassroom || { _id: classroomId, name: streamTitle || "Class" });
+    setAttendanceDate(new Date().toISOString().slice(0, 10));
+    setShowAttendancePopup(true);
+    setShowStreamModal(false);
+    setSelectedClassroom(null);
+    // Do NOT navigate here!
+  };
+
+  const handleExitClassroom = () => {
+    navigate("/user-home");
+  };
 
   // Set role, userId, and userName from localStorage
   useEffect(() => {
@@ -260,6 +281,53 @@ export default function StreamPage() {
           </div>
         )}
       </div>
+
+      {/* Stream control buttons */}
+      <div style={{ margin: "24px 0" }}>
+        {isTeacher ? (
+          <button
+            onClick={handleStopStream}
+            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition font-bold"
+          >
+            Stop Stream ;
+          </button>
+        ) : (
+          <button
+            onClick={handleExitClassroom}
+            className="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-900 transition font-bold"
+          >
+            Exit Classroom
+          </button>
+        )}
+      </div>
+
+      {/* Attendance Download Popup */}
+      {showAttendancePopup && attendanceClass && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white/90 text-black rounded-2xl shadow-2xl p-8 flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-2">Attendance Download</h2>
+            <p className="mb-4">
+              <span className="font-semibold">Class:</span> {attendanceClass.name}<br />
+              <span className="font-semibold">Date:</span> {attendanceDate}
+            </p>
+            <a
+              href={`http://localhost:3000/classrooms/${attendanceClass._id}/attendance`}
+              className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition mb-4"
+            >
+              <FaDownload /> Download CSV
+            </a>
+            <button
+              onClick={() => {
+                setShowAttendancePopup(false);
+                navigate("/teacher-home");
+              }}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

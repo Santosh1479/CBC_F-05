@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { io } from "socket.io-client";
+import { FaDownload } from "react-icons/fa"; // For download icon
 
 const socket = io(`${import.meta.env.VITE_SOCKET_URL}`);
 
@@ -18,6 +19,9 @@ export default function TeacherHome() {
   const [showForm, setShowForm] = useState(false);
   const [showStreamModal, setShowStreamModal] = useState(false);
   const [newClassroom, setNewClassroom] = useState({ name: "", subject: "" });
+  const [showAttendancePopup, setShowAttendancePopup] = useState(false);
+  const [attendanceClass, setAttendanceClass] = useState(null);
+  const [attendanceDate, setAttendanceDate] = useState("");
 
   // Fetch classrooms created by the teacher
   useEffect(() => {

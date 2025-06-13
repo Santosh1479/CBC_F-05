@@ -110,3 +110,41 @@ exports.addStudent = async (req, res) => {
     res.status(500).json({ message: "Failed to add student to classroom" });
   }
 };
+
+// Download attendance for a classroom
+exports.downloadAttendance = async (req, res) => {
+  const { classroomId } = req.params;
+  try {
+    const classroom = await Classroom.findById(classroomId).lean();
+    if (!classroom) return res.status(404).send("Classroom not found");
+
+    // Get all students' info
+    const students = await User.find({ _id: { $in: classroom.students } }).lean();
+
+    // Prepare attendance array
+    const attendance = students.map(student => ({
+      name: student.name,
+      credits: classroom.credits?.[student._id.toString()] ?? 0,
+    }));
+
+    // Sort by name ascending
+    attendance.sort((a, b) => a.name.localeCompare(b.name));
+
+    // CSV header
+    let csv = "Name,Credits\n";
+    csv += attendance.map(a =>
+      `"${(a.name || "").replace(/"/g, '""')}",${a.credits}`
+    ).join("\n");
+
+    // Generate end time string: YYYY-MM-DD_HH-mm
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, "0");
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=${classroom.name}_${dateStr}.csv`);
+    res.send(csv);
+  } catch (err) {
+    res.status(500).send("Error generating attendance");
+  }
+};

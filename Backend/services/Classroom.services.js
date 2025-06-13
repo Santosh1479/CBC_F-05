@@ -79,3 +79,25 @@ exports.addStudent = async (classroomId, studentId) => {
     throw new Error("Failed to add student to classroom");
   }
 };
+
+// Get attendance CSV for a classroom
+exports.getAttendanceCSV = async (classroomId) => {
+  const classroom = await Classroom.findById(classroomId).lean();
+  if (!classroom) throw new Error("Classroom not found");
+
+  const students = await User.find({ _id: { $in: classroom.students } }).lean();
+
+  const attendance = students.map(student => ({
+    name: student.name,
+    credits: classroom.credits?.[student._id.toString()] ?? 0,
+  }));
+
+  // Sort by name ascending
+  attendance.sort((a, b) => a.name.localeCompare(b.name));
+
+  // CSV header
+  let csv = "Name,Credits\n";
+  csv += attendance.map(a => `${a.name},${a.credits}`).join("\n");
+
+  return csv;
+};

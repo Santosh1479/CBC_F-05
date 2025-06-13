@@ -20,4 +20,7 @@ router.get('/student/:userId', classroomController.getClassroomsByStudentId);
 // Add a student to a classroom
 router.post('/:classroomId/add-student', classroomController.addStudent);
 
+// Download attendance CSV
+router.get('/:classroomId/attendance', classroomController.downloadAttendance);
+
 module.exports = router;
