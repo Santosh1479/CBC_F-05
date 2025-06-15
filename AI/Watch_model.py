@@ -26,8 +26,8 @@ mobilenet.classifier = nn.Sequential(
 )
 mobilenet = mobilenet.to(DEVICE)
 
-efficientnet_checkpoint_path = r'C:\\Users\\user\\OneDrive\\Desktop\\CBC_F-05_origin\\vin\\AI\\best_attention_model_efficientnet.pth'
-mobilenet_checkpoint_path = r'C:\\Users\\user\\OneDrive\\Desktop\\CBC_F-05_origin\\vin\\AI\\best_attention_modelmobilenet' \
+efficientnet_checkpoint_path = r'C:\Users\Santosh\OneDrive\Desktop\CBC_F-05\AI\best_attention_model_efficientnet.pth'
+mobilenet_checkpoint_path = r'C:\Users\Santosh\OneDrive\Desktop\CBC_F-05\AI\best_attention_modelmobilenet' \
 '.pth'
 
 if torch.cuda.is_available():
@@ -48,7 +48,7 @@ gaze_model = models.mobilenet_v2(pretrained=True)
 gaze_model.classifier[1] = nn.Linear(gaze_model.last_channel, 3)  
 gaze_model = gaze_model.to(DEVICE)
 
-gaze_model_checkpoint_path = r'C:\\Users\\user\\OneDrive\\Desktop\\CBC_F-05_origin\\AI\\head_pose_best_model.pt'
+gaze_model_checkpoint_path = r'C:\Users\Santosh\OneDrive\Desktop\CBC_F-05\AI\head_pose_best_model.pt'
 gaze_model.load_state_dict(torch.load(gaze_model_checkpoint_path, map_location=DEVICE))
 gaze_model.eval()
 
