@@ -190,21 +190,18 @@ export default function StreamPage() {
         const formData = new FormData();
         formData.append("image", blob, "frame.jpg");
         try {
-          const res = await fetch("http://127.0.0.1:5000/predict-emotion", {
+          const res = await fetch(`${import.meta.env.VITE_ML_URI}/predict-state`, {
             method: "POST",
             body: formData,
           });
           const data = await res.json();
-          if (data.emotion) {
-            const mapped = EMOTION_MAP[data.emotion] || "attentive";
+          if (data.state) {
             setEmotionHistory((prev) => {
-              const newHistory = [...prev, mapped].slice(-5); // Keep last 5
-              // If last 5 are the same, confirm emotion
+              const newHistory = [...prev, data.state].slice(-5);
               if (newHistory.length === 5 && newHistory.every((e) => e === newHistory[0])) {
                 if (confirmedEmotion !== newHistory[0]) {
                   setConfirmedEmotion(newHistory[0]);
                   setStudentEmotion(newHistory[0]);
-                  // Send to teacher if not attentive
                   if (["confused", "bored", "looking away"].includes(newHistory[0])) {
                     socket.emit("student-emotion", {
                       classroomId,
